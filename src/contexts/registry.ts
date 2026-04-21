@@ -1,7 +1,11 @@
 import {
-  PackagePlus,
+  BarChart3,
   FileEdit,
+  Megaphone,
+  PackagePlus,
   Settings,
+  ShoppingBag,
+  Star,
   type LucideIcon,
 } from "lucide-react"
 import type { ContextRef, ContextType, Destination } from "./types"
@@ -22,7 +26,12 @@ export const CONTEXT_META: Record<ContextType, Meta> = {
     keywords: ["new", "product", "create", "store"],
   },
   "edit-page": {
-    defaultTitle: (params) => (params?.id ? `Edit page #${params.id}` : "Edit page"),
+    defaultTitle: (params) => {
+      const id = params?.id
+      if (id === undefined || id === null || id === "") return "Edit page"
+      const s = String(id).replace(/-/g, " ")
+      return s.charAt(0).toUpperCase() + s.slice(1)
+    },
     icon: FileEdit,
     description: "Edit a page",
     keywords: ["page", "content", "edit"],
@@ -32,6 +41,34 @@ export const CONTEXT_META: Record<ContextType, Meta> = {
     icon: Settings,
     description: "Site and account settings",
     keywords: ["preferences", "config", "admin"],
+    singleton: true,
+  },
+  orders: {
+    defaultTitle: () => "Orders",
+    icon: ShoppingBag,
+    description: "Manage and fulfill orders",
+    keywords: ["orders", "fulfillment", "store", "commerce"],
+    singleton: true,
+  },
+  "product-reviews": {
+    defaultTitle: () => "Product reviews",
+    icon: Star,
+    description: "Customer reviews and ratings",
+    keywords: ["reviews", "ratings", "feedback", "products"],
+    singleton: true,
+  },
+  marketing: {
+    defaultTitle: () => "Marketing",
+    icon: Megaphone,
+    description: "Campaigns, promotions, and email",
+    keywords: ["marketing", "campaigns", "promotions", "email", "ads"],
+    singleton: true,
+  },
+  analytics: {
+    defaultTitle: () => "Analytics",
+    icon: BarChart3,
+    description: "Site and store performance",
+    keywords: ["analytics", "stats", "performance", "insights", "reports"],
     singleton: true,
   },
 }
@@ -81,5 +118,37 @@ export const DESTINATIONS: Destination[] = [
     description: "Site and account settings",
     icon: CONTEXT_META.settings.icon,
     keywords: CONTEXT_META.settings.keywords,
+  },
+  {
+    id: "orders",
+    type: "orders",
+    title: "Orders",
+    description: CONTEXT_META.orders.description,
+    icon: CONTEXT_META.orders.icon,
+    keywords: CONTEXT_META.orders.keywords,
+  },
+  {
+    id: "product-reviews",
+    type: "product-reviews",
+    title: "Product reviews",
+    description: CONTEXT_META["product-reviews"].description,
+    icon: CONTEXT_META["product-reviews"].icon,
+    keywords: CONTEXT_META["product-reviews"].keywords,
+  },
+  {
+    id: "marketing",
+    type: "marketing",
+    title: "Marketing",
+    description: CONTEXT_META.marketing.description,
+    icon: CONTEXT_META.marketing.icon,
+    keywords: CONTEXT_META.marketing.keywords,
+  },
+  {
+    id: "analytics",
+    type: "analytics",
+    title: "Analytics",
+    description: CONTEXT_META.analytics.description,
+    icon: CONTEXT_META.analytics.icon,
+    keywords: CONTEXT_META.analytics.keywords,
   },
 ]

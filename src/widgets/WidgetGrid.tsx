@@ -5,9 +5,9 @@ import { AnalyticsWidget } from "./AnalyticsWidget"
 import { NavWidget } from "./NavWidget"
 
 const SPAN: Record<WidgetSize, string> = {
-  sm: "col-span-12 sm:col-span-6 lg:col-span-3",
-  md: "col-span-12 sm:col-span-6 lg:col-span-4",
-  lg: "col-span-12 lg:col-span-6",
+  sm: "col-span-12 sm:col-span-6 lg:col-span-3 2xl:col-span-2",
+  md: "col-span-12 sm:col-span-6 lg:col-span-4 2xl:col-span-3",
+  lg: "col-span-12 lg:col-span-6 2xl:col-span-4",
 }
 
 function renderWidget(w: WidgetDef) {

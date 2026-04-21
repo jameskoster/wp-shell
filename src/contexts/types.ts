@@ -4,6 +4,10 @@ export type ContextType =
   | "add-product"
   | "edit-page"
   | "settings"
+  | "orders"
+  | "product-reviews"
+  | "marketing"
+  | "analytics"
 
 export type ContextParams = Record<string, string | number | undefined>
 

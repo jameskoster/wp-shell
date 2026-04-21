@@ -4,6 +4,10 @@ const VALID_TYPES: ContextType[] = [
   "add-product",
   "edit-page",
   "settings",
+  "orders",
+  "product-reviews",
+  "marketing",
+  "analytics",
 ]
 
 export function refToHash(ref: ContextRef): string {
