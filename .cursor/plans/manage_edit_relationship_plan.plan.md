@@ -4,40 +4,40 @@ overview: Introduce a first-class distinction between *manage* contexts (datavie
 todos:
   - id: subnav-primitive
     content: "[Phase A — primitives] Build `shell/ContextLayout.tsx` and `shell/ContextSubnav.tsx` (collapsible left-rail subnav slot, item list with active state + optional badge/count, composable API)"
-    status: pending
+    status: completed
   - id: model-types
     content: "[Phase A — model] Extend `contexts/types.ts`: add `pages` and `editor` types; Editor params shape is `{ kind, id, instanceId? }` with `kind` open-set ('page' | 'post' | 'template' | 'template-part' | 'pattern' | 'navigation') so future kinds slot in"
-    status: pending
+    status: completed
   - id: model-singleton-key
     content: "[Phase A — model] Add `singletonKey(params)` to context meta and update `contexts/store.ts.open()` to use it; binary `singleton` becomes sugar for a constant key. Pages = constant; Editor = constant by default, instanceId-keyed when pinned"
-    status: pending
+    status: completed
   - id: registry
     content: "[Phase A — model] Register `pages` and `editor` in `contexts/registry.ts` (CONTEXT_META + DESTINATIONS). Editor with no params resolves to the homepage; meta carries a `resolveDefaultParams()` helper"
-    status: pending
+    status: completed
   - id: pages-mock-data
     content: "[Phase B — Pages dataview] Add `mocks/pages.ts` with ~16 realistic page rows (title, slug, status, author, modified, template, isFrontPage flag on one)"
-    status: pending
+    status: completed
   - id: pages-workflow
     content: "[Phase B — Pages dataview] Build `workflows/Pages.tsx` using `<ContextLayout>` + `<ContextSubnav>` for status views (All / Published / Drafts / Scheduled / Trash) and a coss/ui Table for rows; row click → opens Editor with `{ kind: 'page', id }`; row action 'Open in new context' → pinned instance"
-    status: pending
+    status: completed
   - id: editor-shell
     content: "[Phase C — Editor mockup] Build `workflows/Editor.tsx` shell: header (title, status pill, Save/Preview/Publish), left doc-settings rail, center canvas (4–5 stacked block placeholders), right inspector rail; non-functional but evocative. No 'home' state — see §7"
-    status: pending
+    status: completed
   - id: editor-default-doc
     content: "[Phase C — Editor mockup] When Editor is opened with no params, resolve to the homepage page id; update context title to 'Editor: <doc title>' dynamically"
-    status: pending
+    status: completed
   - id: recipe-rewire
     content: "[Phase D — wiring] In `recipes/admin.ts` nav widget: repoint 'Pages' to the new `pages` context. Leave 'Appearance' untouched (still routes to `edit-page` placeholder) — its unbundling is a future slice"
-    status: pending
+    status: completed
   - id: workflows-registry
     content: "[Phase D — wiring] Register `Pages` and `Editor` in `workflows/index.tsx` REGISTRY"
-    status: pending
+    status: completed
   - id: switcher-affordance
     content: "[Phase D — wiring] Verify ContextSwitcher + CommandPalette show Pages and Editor cleanly; confirm Pages stays open after launching Editor; confirm Cmd+Tab cycles Pages ↔ Editor"
-    status: pending
+    status: completed
   - id: docs
     content: "[Phase E — polish] Update README with: the manage→Editor model, the Editor's multi-kind / hybrid-singleton design, the `<ContextLayout>` primitive, and how to add a new manage→Editor pair"
-    status: pending
+    status: completed
 isProject: false
 ---
 

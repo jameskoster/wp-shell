@@ -1,7 +1,12 @@
 import { useMemo } from "react"
 import { create } from "zustand"
 import type { Context, ContextRef } from "./types"
-import { isSingleton, metaFor, titleFor } from "./registry"
+import {
+  metaFor,
+  resolveDefaultParams,
+  singletonKeyFor,
+  titleFor,
+} from "./registry"
 import { hashToRef, refKey, refToHash } from "./url"
 
 type ClosedRecent = {
@@ -45,7 +50,8 @@ type Actions = {
 type Store = State & Actions
 
 function makeId(ref: ContextRef): string {
-  if (isSingleton(ref.type)) return ref.type
+  const key = singletonKeyFor(ref.type, ref.params)
+  if (key !== undefined) return `${ref.type}:${key}`
   return `${ref.type}:${refKey(ref)}:${Date.now().toString(36)}${Math.random()
     .toString(36)
     .slice(2, 6)}`
@@ -55,11 +61,20 @@ function findExisting(
   contexts: Context[],
   ref: ContextRef
 ): Context | undefined {
-  if (isSingleton(ref.type)) {
-    return contexts.find((c) => c.type === ref.type)
-  }
-  const key = refKey(ref)
-  return contexts.find((c) => `${c.type}:${refKey({ type: c.type, params: c.params })}` === `${ref.type}:${key}`)
+  const key = singletonKeyFor(ref.type, ref.params)
+  if (key === undefined) return undefined
+  return contexts.find(
+    (c) => c.type === ref.type && singletonKeyFor(c.type, c.params) === key
+  )
+}
+
+function withDefaults(ref: ContextRef): ContextRef {
+  const hasParams =
+    ref.params !== undefined && Object.keys(ref.params).length > 0
+  if (hasParams) return ref
+  const defaults = resolveDefaultParams(ref.type)
+  if (!defaults) return ref
+  return { ...ref, params: defaults }
 }
 
 function syncHash(activeContext: Context | null) {
@@ -83,7 +98,8 @@ export const useContexts = create<Store>((set, get) => ({
   closedRecents: [],
   pendingLaunch: null,
 
-  open: (ref, originRect) => {
+  open: (incoming, originRect) => {
+    const ref = withDefaults(incoming)
     const now = Date.now()
     const state = get()
     const existing = findExisting(state.openContexts, ref)
@@ -101,15 +117,23 @@ export const useContexts = create<Store>((set, get) => ({
           }
         : null
     if (existing) {
+      // Apply any new params + recompute the title so contexts like the
+      // Editor can swap their loaded document when the same singleton key
+      // is reopened with a different `id`.
+      const nextParams = ref.params ?? existing.params
+      const nextTitle = titleFor({ ...ref, params: nextParams })
       const updated = state.openContexts.map((c) =>
-        c.id === existing.id ? { ...c, lastFocusedAt: now } : c
+        c.id === existing.id
+          ? { ...c, params: nextParams, title: nextTitle, lastFocusedAt: now }
+          : c
       )
+      const updatedExisting = updated.find((c) => c.id === existing.id)!
       set({
         openContexts: updated,
         activeId: existing.id,
         pendingLaunch: launchFor(existing.id),
       })
-      syncHash(existing)
+      syncHash(updatedExisting)
       return existing.id
     }
     const meta = metaFor(ref.type)

@@ -31,7 +31,7 @@ export const adminRecipe: Recipe = {
       description: "Start a new article",
       icon: FileText,
       size: "sm",
-      action: { type: "edit-page", params: { id: "new-post" }, title: "New post" },
+      action: { type: "editor", params: { kind: "post", id: "new" } },
     },
     {
       id: "tile-new-page",
@@ -40,7 +40,7 @@ export const adminRecipe: Recipe = {
       description: "Add a page to your site",
       icon: FileEdit,
       size: "sm",
-      action: { type: "edit-page", params: { id: "new-page" }, title: "New page" },
+      action: { type: "editor", params: { kind: "page", id: "new" } },
     },
     {
       id: "tile-add-product",
@@ -164,7 +164,7 @@ export const adminRecipe: Recipe = {
           id: "n-pages",
           title: "Pages",
           icon: FileEdit,
-          action: { type: "edit-page", params: { id: "pages" }, title: "Pages" },
+          action: { type: "pages" },
           badge: "24",
         },
         {

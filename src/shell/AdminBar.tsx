@@ -137,11 +137,7 @@ export function AdminBar() {
               <MenuItem
                 onClick={(e) =>
                   openContext(
-                    {
-                      type: "edit-page",
-                      params: { id: `new-${Date.now().toString(36)}` },
-                      title: "New page",
-                    },
+                    { type: "editor", params: { kind: "page", id: "new" } },
                     e.currentTarget.getBoundingClientRect(),
                   )
                 }
@@ -152,11 +148,7 @@ export function AdminBar() {
               <MenuItem
                 onClick={(e) =>
                   openContext(
-                    {
-                      type: "edit-page",
-                      params: { id: `post-${Date.now().toString(36)}` },
-                      title: "New post",
-                    },
+                    { type: "editor", params: { kind: "post", id: "new" } },
                     e.currentTarget.getBoundingClientRect(),
                   )
                 }

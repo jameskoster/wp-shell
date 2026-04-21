@@ -8,8 +8,24 @@ export type ContextType =
   | "product-reviews"
   | "marketing"
   | "analytics"
+  | "pages"
+  | "editor"
 
 export type ContextParams = Record<string, string | number | undefined>
+
+export type EditorKind =
+  | "page"
+  | "post"
+  | "template"
+  | "template-part"
+  | "pattern"
+  | "navigation"
+
+export type EditorParams = {
+  kind?: EditorKind
+  id?: string
+  instanceId?: string
+} & ContextParams
 
 export type Context = {
   id: string
