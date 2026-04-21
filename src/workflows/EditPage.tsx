@@ -1,10 +1,9 @@
 import { FileEdit } from "lucide-react"
 import { StubWorkflow } from "./StubWorkflow"
-import { useActiveContext } from "@/contexts/store"
+import type { Context } from "@/contexts/types"
 
-export function EditPage() {
-  const ctx = useActiveContext()
-  const id = ctx?.params?.id ?? "untitled"
+export function EditPage({ ctx }: { ctx: Context }) {
+  const id = ctx.params?.id ?? "untitled"
   return (
     <StubWorkflow
       title={`Edit page — ${id}`}

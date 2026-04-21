@@ -212,6 +212,8 @@ export function ContextStage() {
             isActive={isActive}
             switcherOpen={switcherOpen}
             cell={cell}
+            stageW={stageRect.w}
+            stageH={stageRect.h}
             instantTransform={scrolling}
             launchTransform={launchTransform}
             launchSeq={launchSeq}

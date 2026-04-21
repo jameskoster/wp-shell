@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type CSSProperties } from "react"
+import { useLayoutEffect, useState } from "react"
 import { X } from "lucide-react"
 import { ContextSurface } from "@/workflows"
 import type { Context } from "@/contexts/types"
@@ -9,6 +9,11 @@ type Props = {
   isActive: boolean
   switcherOpen: boolean
   cell: Cell | undefined
+  // Stage size in px — used to express "full screen" as numeric width/height
+  // so the chrome can interpolate cleanly between full and cell sizes
+  // (string "100%" → px doesn't always interpolate cleanly).
+  stageW: number
+  stageH: number
   instantTransform?: boolean
   // When `launchSeq` changes to a non-null value, the surface snaps to
   // `launchTransform` (no transition) and then on the next frame animates
@@ -23,8 +28,10 @@ type Props = {
 
 // Inactive contexts park here when the switcher is closed: off the left
 // edge at slot scale, so opening the switcher slides them into their slots
-// instead of fading them in.
-const PARK_X = "-100vw"
+// instead of fading them in. Numeric so it animates cleanly with cell.x.
+function parkX(stageW: number): number {
+  return -Math.max(stageW, 1)
+}
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false
@@ -36,12 +43,15 @@ export function ContextTile({
   isActive,
   switcherOpen,
   cell,
+  stageW,
+  stageH,
   instantTransform = false,
   launchTransform = null,
   launchSeq = null,
   onSelect,
   onClose,
 }: Props) {
+  const PARK = parkX(stageW)
   // Two-phase launch state:
   //   phase 1 (snapping=true, launchOverride=transform): surface jumps to
   //     the trigger rect with the transition disabled — no "rewind" animation
@@ -83,23 +93,35 @@ export function ContextTile({
   } else if (isActive) {
     surfaceTransform = "translate3d(0px, 0px, 0) scale(1)"
   } else if (cell) {
-    surfaceTransform = `translate3d(${PARK_X}, ${cell.y}px, 0) scale(${cell.scale})`
+    surfaceTransform = `translate3d(${PARK}px, ${cell.y}px, 0) scale(${cell.scale})`
   } else {
-    surfaceTransform = `translate3d(${PARK_X}, 0px, 0) scale(1)`
+    surfaceTransform = `translate3d(${PARK}px, 0px, 0) scale(1)`
   }
 
-  // Chrome bounds animate to track the surface's visual bounds. With matching
-  // duration + easing, the surface and chrome (close button, click target)
-  // travel as one unit instead of the chrome appearing in place.
-  let chromeStyle: Pick<CSSProperties, "top" | "left" | "width" | "height">
+  // Chrome moves with `transform: translate3d` (composited, identical motion
+  // profile to the surface) and only width/height animate as plain px. Using
+  // top/left/width="100%" caused the close button to drift on a different
+  // motion curve than the surface, especially noticeable when the active
+  // tile traveled across most of the viewport.
+  let chromeTransform: string
+  let chromeW: number
+  let chromeH: number
   if (switcherOpen && cell) {
-    chromeStyle = { top: cell.y, left: cell.x, width: cell.w, height: cell.h }
+    chromeTransform = `translate3d(${cell.x}px, ${cell.y}px, 0)`
+    chromeW = cell.w
+    chromeH = cell.h
   } else if (isActive) {
-    chromeStyle = { top: 0, left: 0, width: "100%", height: "100%" }
+    chromeTransform = "translate3d(0px, 0px, 0)"
+    chromeW = stageW
+    chromeH = stageH
   } else if (cell) {
-    chromeStyle = { top: cell.y, left: PARK_X, width: cell.w, height: cell.h }
+    chromeTransform = `translate3d(${PARK}px, ${cell.y}px, 0)`
+    chromeW = cell.w
+    chromeH = cell.h
   } else {
-    chromeStyle = { top: 0, left: PARK_X, width: "100%", height: "100%" }
+    chromeTransform = `translate3d(${PARK}px, 0px, 0)`
+    chromeW = stageW
+    chromeH = stageH
   }
 
   const surfaceVisible = switcherOpen || isActive
@@ -110,7 +132,7 @@ export function ContextTile({
   const transitionClass =
     instantTransform || snapping
       ? ""
-      : "motion-safe:transition-[transform,top,left,width,height,opacity,border-radius] motion-safe:duration-1000 motion-safe:ease-out"
+      : "motion-safe:transition-[transform,width,height,opacity,border-radius] motion-safe:duration-1000 motion-safe:ease-out"
 
   // The surface is `transform: scale()`d, which scales its border-radius
   // too. To make the visible corners match the chrome's 8px `rounded-lg`,
@@ -133,16 +155,19 @@ export function ContextTile({
         inert={!surfaceVisible}
       >
         <div className="flex h-full w-full flex-col">
-          <ContextSurface type={ctx.type} />
+          <ContextSurface ctx={ctx} />
         </div>
       </div>
 
       <div
-        className={`absolute z-30 ${transitionClass}`}
+        className={`absolute left-0 top-0 z-30 origin-top-left ${transitionClass}`}
         style={{
-          ...chromeStyle,
+          transform: chromeTransform,
+          width: chromeW,
+          height: chromeH,
           opacity: switcherOpen ? 1 : 0,
           pointerEvents: switcherOpen ? "auto" : "none",
+          willChange: "transform",
         }}
         aria-hidden={!switcherOpen}
       >
