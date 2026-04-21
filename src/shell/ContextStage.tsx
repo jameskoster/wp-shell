@@ -197,7 +197,7 @@ export function ContextStage() {
       aria-label={switcherOpen ? "Open contexts" : undefined}
     >
       <div
-        className={`absolute inset-0 z-0 flex motion-safe:transition-[opacity,filter] motion-safe:duration-1000 motion-safe:ease-out ${
+        className={`absolute inset-0 z-0 flex motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
           switcherOpen ? "opacity-40 blur-sm" : "opacity-100 blur-0"
         }`}
         aria-hidden={!homeIsActive && !switcherOpen}
@@ -214,7 +214,7 @@ export function ContextStage() {
             closeOverlay()
           }}
           aria-label="Return home"
-          className="absolute inset-0 z-10 cursor-default outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:duration-1000"
+          className="absolute inset-0 z-10 cursor-default outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
         />
       ) : null}
 
@@ -256,7 +256,7 @@ export function ContextStage() {
       })}
 
       {showHomeHint ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-8 z-30 flex justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-1000">
+        <div className="pointer-events-none absolute inset-x-0 bottom-8 z-30 flex justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
           <div className="rounded-full border bg-popover px-3 py-1.5 text-xs text-muted-foreground shadow-xs/5">
             <KbdGroup>
               <span>Open something from</span>

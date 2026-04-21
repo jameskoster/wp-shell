@@ -5,6 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    /* Quintic ease-out: pronounced deceleration that lets motion settle
+       gracefully at rest. Used as the universal curve for shell motion
+       (context switcher, dashboard fade, admin bar) so animations don't
+       feel rigid like the default CSS ease-out. */
+    --ease-glide: cubic-bezier(0.22, 1, 0.36, 1);
     --animate-skeleton: skeleton 2s -1s infinite linear;
     --animate-caret-blink: 1s ease-out infinite caret-blink;
     --animate-toast-success-odd: toast-success-odd 0.32s cubic-bezier(0.5, 1, 0.89, 1);

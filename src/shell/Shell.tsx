@@ -50,7 +50,7 @@ export function Shell() {
         aria-label={switcherOpen ? "Return home" : undefined}
       >
         <div
-          className={`motion-safe:transition-[opacity,filter] motion-safe:duration-1000 motion-safe:ease-out ${
+          className={`motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
             switcherOpen
               ? "pointer-events-none opacity-40 blur-sm"
               : "opacity-100 blur-0"

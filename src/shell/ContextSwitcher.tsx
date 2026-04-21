@@ -7,7 +7,7 @@ export function ContextSwitcher() {
   if (!open) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-1000">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
       <div className="pointer-events-auto rounded-full border bg-popover px-4 py-2 shadow-lg/5">
         <KbdGroup>
           <Kbd>{shortcutLabel("switcher")}</Kbd>

@@ -129,10 +129,15 @@ export function ContextTile({
   // Single transition spec used by both surface and chrome so they stay in
   // lock-step. Disabled during scroll (direct wheel input) and during the
   // launch snap (so the tile pops to the trigger rect without a rewind).
+  // Inactive tiles sliding out to PARK get a slower duration: they cover a
+  // much longer distance (full row width) than the active tile growing to
+  // fullscreen, and 300ms made the slide-out blink past too quickly.
+  const transitionDuration =
+    !switcherOpen && !isActive ? "motion-safe:duration-500" : "motion-safe:duration-300"
   const transitionClass =
     instantTransform || snapping
       ? ""
-      : "motion-safe:transition-[transform,width,height,opacity,border-radius] motion-safe:duration-1000 motion-safe:ease-out"
+      : `motion-safe:transition-[transform,width,height,opacity,border-radius] ${transitionDuration} motion-safe:ease-glide`
 
   // The surface is `transform: scale()`d, which scales its border-radius
   // too. To make the visible corners match the chrome's 8px `rounded-lg`,
