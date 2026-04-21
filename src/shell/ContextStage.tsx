@@ -76,9 +76,14 @@ export function ContextStage() {
     [ordered.length, size.w, size.h],
   )
 
-  // Reset scroll whenever the switcher opens.
+  // Reset scroll when the switcher CLOSES, not when it opens. Resetting on
+  // open happens after the first switcher-open render paints, so the tiles
+  // briefly fan out at the stale offset, then re-animate to the correct
+  // positions. While the switcher is closed, scrollOffset doesn't affect any
+  // transform (active tile is at identity, others are parked), so clearing
+  // it eagerly is safe and means the next open render starts at 0.
   useEffect(() => {
-    if (switcherOpen) {
+    if (!switcherOpen) {
       setScrollOffset(0)
       setScrolling(false)
     }
