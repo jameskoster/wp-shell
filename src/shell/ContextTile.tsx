@@ -141,15 +141,22 @@ export function ContextTile({
   const surfaceBorderRadius =
     !cell || (isActive && !switcherOpen) ? 0 : 8 / cell.scale
 
+  // The active tile always sits on top so it covers other tiles as it grows
+  // to fullscreen, with inactive tiles sliding away beneath it (iOS-style).
+  // While the switcher is open everything sits at the same level — tiles
+  // don't overlap in the row, so stacking is irrelevant.
+  const surfaceZ = !switcherOpen && isActive ? 25 : 20
+
   return (
     <>
       <div
-        className={`absolute inset-0 z-20 origin-top-left overflow-hidden bg-background shadow-2xl ${transitionClass}`}
+        className={`absolute inset-0 origin-top-left overflow-hidden bg-background shadow-2xl ${transitionClass}`}
         style={{
           transform: surfaceTransform,
           borderRadius: surfaceBorderRadius,
           pointerEvents: switcherOpen ? "none" : isActive ? "auto" : "none",
           willChange: "transform",
+          zIndex: surfaceZ,
         }}
         aria-hidden={!surfaceVisible}
         inert={!surfaceVisible}

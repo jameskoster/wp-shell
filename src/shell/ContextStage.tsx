@@ -3,6 +3,7 @@ import {
   useActiveContext,
   useContexts,
   useFocusOrder,
+  useOpenContexts,
 } from "@/contexts/store"
 import { useUI } from "./uiStore"
 import { ContextTile } from "./ContextTile"
@@ -35,6 +36,13 @@ function buildLaunchTransform(
 
 export function ContextStage() {
   const ordered = useFocusOrder()
+  // Stable iteration source — never re-sorts on focus changes. Iterating
+  // `ordered` directly meant React had to reorder fragment children whenever
+  // focus changed, which interrupted the in-flight CSS transitions on the
+  // tiles that got shifted (i.e. the ones to the right of the selected
+  // tile). Driving the map off `openContexts` keeps DOM positions fixed and
+  // only the computed `cell`/`isActive` props change.
+  const openContexts = useOpenContexts()
   const active = useActiveContext()
   const switcherOpen = useUI((s) => s.overlay === "switcher")
   const focus = useContexts((s) => s.focus)
@@ -168,6 +176,15 @@ export function ContextStage() {
     [layout.cells, scrollOffset],
   )
 
+  // Map ctx.id → cell index in the focus-ordered switcher row. Lets us
+  // iterate the stable `openContexts` array (preserving DOM order) while
+  // still positioning each tile based on its focus rank.
+  const cellIndexById = useMemo(() => {
+    const map = new Map<string, number>()
+    ordered.forEach((c, i) => map.set(c.id, i))
+    return map
+  }, [ordered])
+
   const homeIsActive = active === null
   const showHomeHint = switcherOpen && ordered.length === 0
 
@@ -201,7 +218,8 @@ export function ContextStage() {
         />
       ) : null}
 
-      {ordered.map((ctx, i) => {
+      {openContexts.map((ctx) => {
+        const i = cellIndexById.get(ctx.id) ?? 0
         const cell = effectiveCells[i]
         const isActive = ctx.id === active?.id
         const isLaunching =
@@ -231,7 +249,7 @@ export function ContextStage() {
               // Closing the last open context returns home — keeping the
               // switcher overlay around with nothing to switch to would
               // strand the user behind the blur/dim.
-              if (ordered.length === 1 && switcherOpen) closeOverlay()
+              if (openContexts.length === 1 && switcherOpen) closeOverlay()
             }}
           />
         )
