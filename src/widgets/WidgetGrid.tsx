@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils"
 import type { WidgetDef, WidgetSize } from "./types"
 import { LaunchTile } from "./LaunchTile"
 import { InfoWidget } from "./InfoWidget"
@@ -27,7 +28,13 @@ export function WidgetGrid({ widgets }: { widgets: WidgetDef[] }) {
   return (
     <div className="grid grid-cols-12 gap-4">
       {widgets.map((w) => (
-        <div key={w.id} className={SPAN[w.size ?? "md"]}>
+        <div
+          key={w.id}
+          className={cn(
+            SPAN[w.size ?? "md"],
+            w.kind === "launch" && "aspect-square self-start",
+          )}
+        >
           {renderWidget(w)}
         </div>
       ))}

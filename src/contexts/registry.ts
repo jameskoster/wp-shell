@@ -24,6 +24,7 @@ import type {
   Destination,
   EditorKind,
 } from "./types"
+import { refKey } from "./url"
 
 type Meta = {
   defaultTitle: (params?: ContextParams) => string
@@ -152,6 +153,22 @@ export function metaFor(type: ContextType): Meta {
 
 export function titleFor(ref: ContextRef): string {
   return ref.title ?? metaFor(ref.type).defaultTitle(ref.params)
+}
+
+/**
+ * Resolve the canonical icon for a context ref. Some context types are
+ * polymorphic across destinations — `edit-page` for example renders
+ * Users, Plugins, Posts, etc. — so a single per-type icon isn't enough.
+ * `DESTINATIONS` is the source of truth for those per-destination icons;
+ * we fall back to the type-level meta icon for refs not represented
+ * there (e.g. ad-hoc editor instances).
+ */
+export function iconFor(ref: ContextRef): LucideIcon {
+  const target = refKey(ref)
+  const dest = DESTINATIONS.find(
+    (d) => refKey({ type: d.type, params: d.params }) === target
+  )
+  return dest?.icon ?? metaFor(ref.type).icon
 }
 
 export function isSingleton(type: ContextType): boolean {

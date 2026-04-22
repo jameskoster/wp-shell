@@ -16,6 +16,7 @@ export type LaunchTileWidget = WidgetBase & {
   kind: "launch"
   action: ContextRef
   description?: string
+  badge?: string
 }
 
 export type InfoListItem = {
@@ -51,8 +52,9 @@ export type NavItem = {
   badge?: string
 }
 
-export type NavWidget = WidgetBase & {
+export type NavWidget = Omit<WidgetBase, "title"> & {
   kind: "nav"
+  title?: string
   items: NavItem[]
 }
 

@@ -7,7 +7,6 @@ import {
   Megaphone,
   MessageSquare,
   Package,
-  PackagePlus,
   Palette,
   Plug,
   Settings,
@@ -24,51 +23,6 @@ export const adminRecipe: Recipe = {
   role: "Administrator",
   greeting: "Everything across your site, in one place.",
   widgets: [
-    {
-      id: "tile-new-post",
-      kind: "launch",
-      title: "Write post",
-      description: "Start a new article",
-      icon: FileText,
-      size: "sm",
-      action: { type: "editor", params: { kind: "post", id: "new" } },
-    },
-    {
-      id: "tile-new-page",
-      kind: "launch",
-      title: "New page",
-      description: "Add a page to your site",
-      icon: FileEdit,
-      size: "sm",
-      action: { type: "editor", params: { kind: "page", id: "new" } },
-    },
-    {
-      id: "tile-add-product",
-      kind: "launch",
-      title: "Add product",
-      description: "Create a new listing",
-      icon: PackagePlus,
-      size: "sm",
-      action: { type: "add-product" },
-    },
-    {
-      id: "tile-orders",
-      kind: "launch",
-      title: "View orders",
-      description: "12 awaiting fulfillment",
-      icon: ShoppingBag,
-      size: "sm",
-      action: { type: "orders" },
-    },
-    {
-      id: "tile-analytics",
-      kind: "launch",
-      title: "Analytics",
-      description: "Site & store performance",
-      icon: BarChart3,
-      size: "sm",
-      action: { type: "analytics" },
-    },
     {
       id: "metric-traffic",
       kind: "analytics",
@@ -149,8 +103,6 @@ export const adminRecipe: Recipe = {
     {
       id: "nav-classic",
       kind: "nav",
-      title: "Classic admin",
-      source: "Compatibility",
       size: "lg",
       items: [
         {
@@ -158,14 +110,12 @@ export const adminRecipe: Recipe = {
           title: "Posts",
           icon: FileText,
           action: { type: "edit-page", params: { id: "posts" }, title: "Posts" },
-          badge: "312",
         },
         {
           id: "n-pages",
           title: "Pages",
-          icon: FileEdit,
+          icon: FileText,
           action: { type: "pages" },
-          badge: "24",
         },
         {
           id: "n-media",
@@ -189,7 +139,6 @@ export const adminRecipe: Recipe = {
             params: { id: "products" },
             title: "Products",
           },
-          badge: "186",
         },
         {
           id: "n-orders",
@@ -227,11 +176,7 @@ export const adminRecipe: Recipe = {
           id: "n-appearance",
           title: "Appearance",
           icon: Palette,
-          action: {
-            type: "edit-page",
-            params: { id: "appearance" },
-            title: "Appearance",
-          },
+          action: { type: "editor", title: "Appearance" },
         },
         {
           id: "n-plugins",

@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ContextHeaderActions } from "@/shell/ContextHeaderActions"
 import { ContextLayout } from "@/shell/ContextLayout"
 import { ContextSubnav } from "@/shell/ContextSubnav"
 import { useContexts } from "@/contexts/store"
@@ -200,10 +201,13 @@ export function Pages({ ctx }: { ctx: Context }) {
               {view !== "all" ? ` in ${VIEWS.find((v) => v.key === view)?.label.toLowerCase()}` : ""}
             </p>
           </div>
-          <Button size="sm" onClick={handleAddNew}>
-            <FilePlus2 />
-            Add new
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleAddNew}>
+              <FilePlus2 />
+              Add new
+            </Button>
+            <ContextHeaderActions ctx={ctx} />
+          </div>
         </header>
 
         <div className="flex items-center gap-2 border-b px-6 py-3">

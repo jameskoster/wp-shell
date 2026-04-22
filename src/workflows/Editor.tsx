@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { parentForEditor, titleFor } from "@/contexts/registry"
 import { useContexts } from "@/contexts/store"
 import type { Context, ContextRef, EditorKind } from "@/contexts/types"
+import { ContextHeaderActions } from "@/shell/ContextHeaderActions"
 import { getPage, type PageRow } from "@/mocks/pages"
 
 type Doc = {
@@ -157,6 +158,7 @@ export function Editor({ ctx }: { ctx: Context }) {
           <Button size="sm" disabled>
             {doc.status === "published" ? "Update" : "Publish"}
           </Button>
+          <ContextHeaderActions ctx={ctx} />
         </div>
       </header>
 

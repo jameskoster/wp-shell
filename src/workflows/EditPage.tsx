@@ -9,6 +9,7 @@ export function EditPage({ ctx }: { ctx: Context }) {
       description="The block editor would render here. Each edit-page workspace has its own params, so you can keep several open at once."
       icon={ctx.icon ?? FileEdit}
       hint="Edit pages are non-singleton — open another from the command palette."
+      ctx={ctx}
     />
   )
 }

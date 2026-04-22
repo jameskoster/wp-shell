@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import { create } from "zustand"
 import type { Context, ContextRef } from "./types"
 import {
-  metaFor,
+  iconFor,
   resolveDefaultParams,
   singletonKeyFor,
   titleFor,
@@ -153,12 +153,22 @@ export const useContexts = create<Store>((set, get) => ({
     if (existing) {
       // Apply any new params + recompute the title so contexts like the
       // Editor can swap their loaded document when the same singleton key
-      // is reopened with a different `id`.
+      // is reopened with a different `id`. Icon is recomputed too so
+      // polymorphic types (edit-page → Users / Plugins / etc.) stay in
+      // sync with the active destination.
       const nextParams = ref.params ?? existing.params
-      const nextTitle = titleFor({ ...ref, params: nextParams })
+      const nextRef = { ...ref, params: nextParams }
+      const nextTitle = titleFor(nextRef)
+      const nextIcon = iconFor(nextRef)
       const updated = state.openContexts.map((c) =>
         c.id === existing.id
-          ? { ...c, params: nextParams, title: nextTitle, lastFocusedAt: now }
+          ? {
+              ...c,
+              params: nextParams,
+              title: nextTitle,
+              icon: nextIcon,
+              lastFocusedAt: now,
+            }
           : c
       )
       const updatedExisting = updated.find((c) => c.id === existing.id)!
@@ -170,12 +180,11 @@ export const useContexts = create<Store>((set, get) => ({
       syncHash(updatedExisting)
       return existing.id
     }
-    const meta = metaFor(ref.type)
     const newCtx: Context = {
       id: makeId(ref),
       type: ref.type,
       title: titleFor(ref),
-      icon: meta.icon,
+      icon: iconFor(ref),
       params: ref.params,
       openedAt: now,
       lastFocusedAt: now,
@@ -205,10 +214,18 @@ export const useContexts = create<Store>((set, get) => ({
 
     const now = Date.now()
     const nextParams = ref.params ?? existing.params
-    const nextTitle = titleFor({ ...ref, params: nextParams })
+    const nextRef = { ...ref, params: nextParams }
+    const nextTitle = titleFor(nextRef)
+    const nextIcon = iconFor(nextRef)
     const updated = state.openContexts.map((c) =>
       c.id === existing.id
-        ? { ...c, params: nextParams, title: nextTitle, lastFocusedAt: now }
+        ? {
+            ...c,
+            params: nextParams,
+            title: nextTitle,
+            icon: nextIcon,
+            lastFocusedAt: now,
+          }
         : c
     )
     const updatedExisting = updated.find((c) => c.id === existing.id)!
