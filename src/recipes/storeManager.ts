@@ -118,8 +118,6 @@ export const storeManagerRecipe: Recipe = {
     {
       id: "nav-classic",
       kind: "nav",
-      title: "Classic admin",
-      source: "Compatibility",
       size: "lg",
       items: [
         {
@@ -127,7 +125,6 @@ export const storeManagerRecipe: Recipe = {
           title: "Pages",
           icon: FileEdit,
           action: { type: "edit-page", params: { id: "home" }, title: "Pages" },
-          badge: "24",
         },
         {
           id: "n-products",
@@ -138,7 +135,6 @@ export const storeManagerRecipe: Recipe = {
             params: { id: "products" },
             title: "Products",
           },
-          badge: "186",
         },
         {
           id: "n-settings",
