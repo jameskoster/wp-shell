@@ -15,6 +15,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { Badge } from "@/components/ui/badge"
 import { useUI } from "./uiStore"
 import { useClosedRecents, useContexts } from "@/contexts/store"
 import { DESTINATIONS, metaFor } from "@/contexts/registry"
@@ -29,7 +30,7 @@ type Row =
 type Group = {
   value: string
   label: string
-  rows: Row[]
+  items: Row[]
 }
 
 export function CommandPalette() {
@@ -45,7 +46,7 @@ export function CommandPalette() {
     groups.push({
       value: "recent",
       label: "Recent",
-      rows: recents.map((r) => ({
+      items: recents.map((r) => ({
         kind: "recent" as const,
         data: { ref: { type: r.type, params: r.params, title: r.title }, title: r.title },
       })),
@@ -55,7 +56,7 @@ export function CommandPalette() {
   groups.push({
     value: "go-to",
     label: "Go to",
-    rows: [
+    items: [
       { kind: "home" as const },
       ...DESTINATIONS.map((d) => ({ kind: "destination" as const, data: d })),
     ],
@@ -87,7 +88,7 @@ export function CommandPalette() {
           <CommandList>
             {(group: Group, index: number) => (
               <Fragment key={group.value}>
-                <CommandGroup items={group.rows}>
+                <CommandGroup items={group.items}>
                   <CommandGroupLabel>{group.label}</CommandGroupLabel>
                   <CommandCollection>
                     {(row: Row) => {
@@ -118,9 +119,13 @@ export function CommandPalette() {
                             }
                           >
                             <Icon className="size-4 text-muted-foreground" />
-                            <span>{d.title}</span>
-                            {d.description ? (
-                              <span className="ms-auto text-xs text-muted-foreground/72">
+                            <span className="flex-1">{d.title}</span>
+                            {d.badge ? (
+                              <Badge variant="secondary" className="text-[11px]">
+                                {d.badge}
+                              </Badge>
+                            ) : d.description ? (
+                              <span className="text-xs text-muted-foreground/72">
                                 {d.description}
                               </span>
                             ) : null}

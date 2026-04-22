@@ -51,4 +51,5 @@ export type Destination = {
   icon?: LucideIcon
   keywords?: string[]
   params?: ContextParams
+  badge?: string
 }
