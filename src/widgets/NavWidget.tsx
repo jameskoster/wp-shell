@@ -16,6 +16,7 @@ import {
 import { useContexts } from "@/contexts/store"
 import { cn } from "@/lib/utils"
 import type { NavWidget as NavWidgetDef } from "./types"
+import { WidgetMenu } from "./WidgetMenu"
 
 export function NavWidget({
   widget,
@@ -38,7 +39,13 @@ export function NavWidget({
   const showHeader = !collapsed && Boolean(widget.title || widget.source)
 
   return (
-    <Card className={cn("h-full", collapsed && "w-fit")}>
+    <Card className={cn("group h-full", collapsed && "w-fit")}>
+      {!collapsed ? (
+        <WidgetMenu
+          widgetId={widget.id}
+          className="absolute top-3 right-3 z-10"
+        />
+      ) : null}
       {showHeader ? (
         <CardHeader>
           {widget.title ? (

@@ -7,12 +7,17 @@ import {
 } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
 import type { InfoWidget as InfoWidgetDef } from "./types"
+import { WidgetMenu } from "./WidgetMenu"
 
 export function InfoWidget({ widget }: { widget: InfoWidgetDef }) {
   const open = useContexts((s) => s.open)
   const Icon = widget.icon
   return (
-    <Card className="h-full">
+    <Card className="group h-full">
+      <WidgetMenu
+        widgetId={widget.id}
+        className="absolute top-3 right-3 z-10"
+      />
       <CardHeader>
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}

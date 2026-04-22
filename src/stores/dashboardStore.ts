@@ -16,9 +16,12 @@ export type DashboardLaunchTile = {
 
 type DashboardState = {
   tiles: DashboardLaunchTile[]
+  hiddenWidgetIds: string[]
   hasTile: (action: ContextRef) => boolean
   addTile: (tile: Omit<DashboardLaunchTile, "id">) => void
   removeTile: (action: ContextRef) => void
+  removeWidget: (id: string) => void
+  isHidden: (id: string) => boolean
 }
 
 const DEFAULT_NAV_TILE_IDS = [
@@ -75,6 +78,7 @@ function seedTiles(): DashboardLaunchTile[] {
 
 export const useDashboard = create<DashboardState>((set, get) => ({
   tiles: seedTiles(),
+  hiddenWidgetIds: [],
   hasTile: (action) => {
     const id = tileIdFor(action)
     return get().tiles.some((t) => t.id === id)
@@ -89,10 +93,28 @@ export const useDashboard = create<DashboardState>((set, get) => ({
         ...state.tiles,
         { ...tile, id, badge: tile.badge ?? navMatch?.badge },
       ],
+      hiddenWidgetIds: state.hiddenWidgetIds.filter((hid) => hid !== id),
     })
   },
   removeTile: (action) => {
     const id = tileIdFor(action)
     set({ tiles: get().tiles.filter((t) => t.id !== id) })
   },
+  /**
+   * Remove any widget from the dashboard by id. If the id matches a launch
+   * tile we drop it from `tiles`; otherwise (recipe-sourced widgets like
+   * info / analytics / nav) we add it to `hiddenWidgetIds` so the Dashboard
+   * can filter it out.
+   */
+  removeWidget: (id) => {
+    const state = get()
+    const isTile = state.tiles.some((t) => t.id === id)
+    if (isTile) {
+      set({ tiles: state.tiles.filter((t) => t.id !== id) })
+      return
+    }
+    if (state.hiddenWidgetIds.includes(id)) return
+    set({ hiddenWidgetIds: [...state.hiddenWidgetIds, id] })
+  },
+  isHidden: (id) => get().hiddenWidgetIds.includes(id),
 }))

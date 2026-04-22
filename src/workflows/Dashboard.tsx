@@ -10,9 +10,13 @@ import { cn } from "@/lib/utils"
 export function Dashboard() {
   const recipe = adminRecipe
   const tiles = useDashboard((s) => s.tiles)
-  const navWidgets = recipe.widgets.filter((w) => w.kind === "nav")
+  const hiddenWidgetIds = useDashboard((s) => s.hiddenWidgetIds)
+  const isHidden = (id: string) => hiddenWidgetIds.includes(id)
+  const navWidgets = recipe.widgets.filter(
+    (w) => w.kind === "nav" && !isHidden(w.id)
+  )
   const otherWidgets = recipe.widgets.filter(
-    (w) => w.kind !== "nav" && w.kind !== "launch"
+    (w) => w.kind !== "nav" && w.kind !== "launch" && !isHidden(w.id)
   )
   const tileWidgets: LaunchTileWidget[] = useMemo(
     () =>

@@ -6,6 +6,7 @@ import {
   CardPanel,
 } from "@/components/ui/card"
 import type { AnalyticsWidget as AnalyticsWidgetDef } from "./types"
+import { WidgetMenu } from "./WidgetMenu"
 
 function Sparkline({ points }: { points: number[] }) {
   if (points.length < 2) return null
@@ -58,7 +59,11 @@ export function AnalyticsWidget({ widget }: { widget: AnalyticsWidgetDef }) {
   const TrendIcon = widget.metric.delta ? TREND_ICON[widget.metric.delta.trend] : null
   const trendColor = widget.metric.delta ? TREND_COLOR[widget.metric.delta.trend] : ""
   return (
-    <Card className="h-full">
+    <Card className="group h-full">
+      <WidgetMenu
+        widgetId={widget.id}
+        className="absolute top-3 right-3 z-10"
+      />
       <CardHeader>
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
