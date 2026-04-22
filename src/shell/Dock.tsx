@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useContexts } from "@/contexts/store"
-import { useIsMobile } from "@/hooks/use-media-query"
+import { useIsMobile, useMediaQuery } from "@/hooks/use-media-query"
 import { adminRecipe } from "@/recipes/admin"
 import { cn } from "@/lib/utils"
 import type { NavItem, NavWidget } from "@/widgets/types"
@@ -18,14 +18,25 @@ import { useUI } from "./uiStore"
 
 type Orientation = "horizontal" | "vertical"
 
-// Static caps. Anything past these collapses into the trailing "More"
-// popover. Mobile uses a tighter cap so the dock comfortably fits on the
-// narrowest common viewports (~375px) without horizontal overflow.
-const MAX_VISIBLE: Record<Orientation, number> = {
-  horizontal: 8,
-  vertical: 8,
+// Vertical dock is centered on viewport height, which varies less than
+// width across devices. A flat cap keeps the dock from dominating short
+// viewports while still surfacing enough items to be useful.
+const MAX_VISIBLE_VERTICAL = 8
+
+// Horizontal cap scales with viewport width. Mobile is intentionally
+// tight so the dock fits comfortably on ~375px screens. Anything past
+// the active cap collapses into the trailing "More" popover.
+function useHorizontalCap(): number {
+  const isMobile = useIsMobile()
+  const is2xl = useMediaQuery("2xl")
+  const isXl = useMediaQuery("xl")
+  const isLg = useMediaQuery("lg")
+  if (isMobile) return 6
+  if (is2xl) return 14
+  if (isXl) return 12
+  if (isLg) return 10
+  return 8
 }
-const MAX_VISIBLE_MOBILE = 6
 
 function effectivePosition(
   stored: DockPosition,
@@ -122,11 +133,13 @@ export function Dock() {
   const isMobile = useIsMobile()
   const switcherOpen = useUI((s) => s.overlay === "switcher")
   const open = useContexts((s) => s.open)
+  const horizontalCap = useHorizontalCap()
 
   const position = effectivePosition(stored, isMobile)
   const orientation = orientationFor(position)
   const items = useMemo(() => getNavItems(), [])
-  const cap = isMobile ? MAX_VISIBLE_MOBILE : MAX_VISIBLE[orientation]
+  const cap =
+    orientation === "horizontal" ? horizontalCap : MAX_VISIBLE_VERTICAL
   const visible = items.slice(0, cap)
   const overflow = items.slice(cap)
 
