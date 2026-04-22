@@ -75,3 +75,26 @@ export function computeStackLayout(
 
   return { cells, tileW, tileH, scale, maxScroll }
 }
+
+/**
+ * Loop-swap layout: exactly two centered tiles, side by side. Used for the
+ * choreographed manage <-> editor swap where the outgoing tile scales
+ * down into `from` and the incoming tile scales up out of `to`. Visually
+ * mirrors the two-tile case of the regular stack layout but is its own
+ * function so the swap presentation can evolve independently.
+ */
+export function computeLoopSwapLayout(
+  stageW: number,
+  stageH: number
+): { from: Cell; to: Cell } {
+  const scale = TILE_SCALE
+  const tileW = stageW * scale
+  const tileH = stageH * scale
+  const y = (stageH - tileH) / 2
+  const rowW = 2 * tileW + GAP
+  const rowStart = (stageW - rowW) / 2
+  return {
+    from: { x: rowStart, y, w: tileW, h: tileH, scale },
+    to: { x: rowStart + tileW + GAP, y, w: tileW, h: tileH, scale },
+  }
+}

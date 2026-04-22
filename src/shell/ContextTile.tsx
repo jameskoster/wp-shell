@@ -22,6 +22,16 @@ type Props = {
   // already-active context still pings.
   launchTransform?: string | null
   launchSeq?: number | null
+  // Loop-swap participation — this tile is one of the two tiles in a
+  // choreographed manage <-> editor swap. Runs in two sequential phases:
+  //   'exit'  — from: identity → cell; to: snapped at cell (waiting).
+  //   'enter' — from: held at cell; to: cell → identity.
+  // Snap-from-cell is applied on `loopSwapSeq` changes (to-tile only,
+  // exit phase), mirroring the launch-snap pattern.
+  loopSwapRole?: "from" | "to" | null
+  loopSwapPhase?: "exit" | "enter" | null
+  loopSwapCell?: Cell | null
+  loopSwapSeq?: number | null
   onSelect: () => void
   onClose: () => void
 }
@@ -48,6 +58,10 @@ export function ContextTile({
   instantTransform = false,
   launchTransform = null,
   launchSeq = null,
+  loopSwapRole = null,
+  loopSwapPhase = null,
+  loopSwapCell = null,
+  loopSwapSeq = null,
   onSelect,
   onClose,
 }: Props) {
@@ -84,10 +98,64 @@ export function ContextTile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [launchSeq])
 
+  // Loop-swap snap: the incoming ('to') tile starts at its swap cell with
+  // no transition, then on the next frame releases back to its natural
+  // pose (identity, since it's the new active context). Same two-frame
+  // dance as launchSeq, but parameterised on cell coords instead of a
+  // CSS transform string.
+  const [loopSnapTransform, setLoopSnapTransform] = useState<string | null>(
+    null
+  )
+  const [loopSnapping, setLoopSnapping] = useState(false)
+
+  useLayoutEffect(() => {
+    // Only the incoming tile needs the snap-at-cell pose, and only at the
+    // start of a fresh swap (phase 'exit'). Phase transitions don't
+    // retrigger it — seq stays stable across phases.
+    if (loopSwapSeq == null || loopSwapRole !== "to" || !loopSwapCell) return
+    if (prefersReducedMotion()) return
+    const startTransform = `translate3d(${loopSwapCell.x}px, ${loopSwapCell.y}px, 0) scale(${loopSwapCell.scale})`
+    setLoopSnapTransform(startTransform)
+    setLoopSnapping(true)
+    let r1 = 0
+    let r2 = 0
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        setLoopSnapping(false)
+        setLoopSnapTransform(null)
+      })
+    })
+    return () => {
+      cancelAnimationFrame(r1)
+      cancelAnimationFrame(r2)
+    }
+    // Re-trigger only on a new swap, mirroring launchSeq semantics.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loopSwapSeq])
+
   // Surface transform — single source of truth for the tile's visual bounds.
+  // Precedence: launch snap > loop snap > loop role > switcher > active > parked.
+  //
+  // Loop swap flow:
+  //   from, phase 'exit'   → cell (animates identity → cell; prev DOM was identity)
+  //   from, phase 'enter'  → cell (held at cell; no visible motion)
+  //   to,   phase 'exit'   → cell (snap-pattern holds it parked while 'from' scales down)
+  //   to,   phase 'enter'  → identity (animates cell → identity; prev DOM was cell)
   let surfaceTransform: string
   if (launchOverride) {
     surfaceTransform = launchOverride
+  } else if (loopSnapTransform) {
+    surfaceTransform = loopSnapTransform
+  } else if (loopSwapRole === "from" && loopSwapCell) {
+    surfaceTransform = `translate3d(${loopSwapCell.x}px, ${loopSwapCell.y}px, 0) scale(${loopSwapCell.scale})`
+  } else if (
+    loopSwapRole === "to" &&
+    loopSwapPhase === "exit" &&
+    loopSwapCell
+  ) {
+    surfaceTransform = `translate3d(${loopSwapCell.x}px, ${loopSwapCell.y}px, 0) scale(${loopSwapCell.scale})`
+  } else if (loopSwapRole === "to" && loopSwapPhase === "enter") {
+    surfaceTransform = "translate3d(0px, 0px, 0) scale(1)"
   } else if (switcherOpen && cell) {
     surfaceTransform = `translate3d(${cell.x}px, ${cell.y}px, 0) scale(${cell.scale})`
   } else if (isActive) {
@@ -106,7 +174,11 @@ export function ContextTile({
   let chromeTransform: string
   let chromeW: number
   let chromeH: number
-  if (switcherOpen && cell) {
+  if (loopSwapRole && loopSwapCell) {
+    chromeTransform = `translate3d(${loopSwapCell.x}px, ${loopSwapCell.y}px, 0)`
+    chromeW = loopSwapCell.w
+    chromeH = loopSwapCell.h
+  } else if (switcherOpen && cell) {
     chromeTransform = `translate3d(${cell.x}px, ${cell.y}px, 0)`
     chromeW = cell.w
     chromeH = cell.h
@@ -124,7 +196,8 @@ export function ContextTile({
     chromeH = stageH
   }
 
-  const surfaceVisible = switcherOpen || isActive
+  const inLoopSwap = !!loopSwapRole
+  const surfaceVisible = switcherOpen || isActive || inLoopSwap
 
   // Single transition spec used by both surface and chrome so they stay in
   // lock-step. Disabled during scroll (direct wheel input) and during the
@@ -133,9 +206,13 @@ export function ContextTile({
   // much longer distance (full row width) than the active tile growing to
   // fullscreen, and 300ms made the slide-out blink past too quickly.
   const transitionDuration =
-    !switcherOpen && !isActive ? "motion-safe:duration-500" : "motion-safe:duration-300"
+    inLoopSwap
+      ? "motion-safe:duration-300"
+      : !switcherOpen && !isActive
+        ? "motion-safe:duration-500"
+        : "motion-safe:duration-300"
   const transitionClass =
-    instantTransform || snapping
+    instantTransform || snapping || loopSnapping
       ? ""
       : `motion-safe:transition-[transform,width,height,opacity,border-radius] ${transitionDuration} motion-safe:ease-glide`
 
@@ -143,14 +220,45 @@ export function ContextTile({
   // too. To make the visible corners match the chrome's 8px `rounded-lg`,
   // pre-divide by the cell scale (so 8/0.4 = 20px CSS → 8px visual). Square
   // only when an active tile fully covers the workspace at identity.
-  const surfaceBorderRadius =
-    !cell || (isActive && !switcherOpen) ? 0 : 8 / cell.scale
+  //
+  // During a loop swap the to-tile animates cell → identity in 'enter', so
+  // its radius transitions from the cell-scaled value to 0 in lock-step
+  // with the transform.
+  let surfaceBorderRadius: number
+  if (
+    loopSwapRole === "from" ||
+    (loopSwapRole === "to" && loopSwapPhase === "exit")
+  ) {
+    surfaceBorderRadius = loopSwapCell ? 8 / loopSwapCell.scale : 0
+  } else if (loopSwapRole === "to" && loopSwapPhase === "enter") {
+    surfaceBorderRadius = 0
+  } else if (isActive && !switcherOpen) {
+    surfaceBorderRadius = 0
+  } else if (cell) {
+    surfaceBorderRadius = 8 / cell.scale
+  } else {
+    surfaceBorderRadius = 0
+  }
 
   // The active tile always sits on top so it covers other tiles as it grows
   // to fullscreen, with inactive tiles sliding away beneath it (iOS-style).
   // While the switcher is open everything sits at the same level — tiles
   // don't overlap in the row, so stacking is irrelevant.
-  const surfaceZ = !switcherOpen && isActive ? 25 : 20
+  //
+  // During a loop swap, stacking follows the phase's primary actor: the
+  // tile currently animating needs to sit on top of the static one.
+  //   phase 'exit'  → from scales down, goes on top (26); to waits beneath (21).
+  //   phase 'enter' → to scales up, goes on top (26); from stays beneath (21).
+  let surfaceZ: number
+  if (inLoopSwap) {
+    if (loopSwapPhase === "enter") {
+      surfaceZ = loopSwapRole === "to" ? 26 : 21
+    } else {
+      surfaceZ = loopSwapRole === "from" ? 26 : 21
+    }
+  } else {
+    surfaceZ = !switcherOpen && isActive ? 25 : 20
+  }
 
   return (
     <>
@@ -159,12 +267,13 @@ export function ContextTile({
         style={{
           transform: surfaceTransform,
           borderRadius: surfaceBorderRadius,
-          pointerEvents: switcherOpen ? "none" : isActive ? "auto" : "none",
+          pointerEvents:
+            switcherOpen || inLoopSwap ? "none" : isActive ? "auto" : "none",
           willChange: "transform",
           zIndex: surfaceZ,
         }}
         aria-hidden={!surfaceVisible}
-        inert={!surfaceVisible}
+        inert={!surfaceVisible || inLoopSwap}
       >
         <div className="flex h-full w-full flex-col">
           <ContextSurface ctx={ctx} />

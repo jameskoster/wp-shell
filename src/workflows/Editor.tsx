@@ -89,14 +89,18 @@ function resolveDoc(ctx: Context): Doc {
 
 export function Editor({ ctx }: { ctx: Context }) {
   const doc = useMemo(() => resolveDoc(ctx), [ctx])
-  const open = useContexts((s) => s.open)
+  const swapTo = useContexts((s) => s.swapTo)
   const parent = parentForEditor(doc.kind)
 
   function handleParentClick(
     ref: ContextRef,
     event: React.MouseEvent<HTMLButtonElement>
   ) {
-    open(ref, event.currentTarget.getBoundingClientRect())
+    // Walking back to the parent manage context is the other half of the
+    // edit loop. swapTo runs the choreographed two-tile swap when the
+    // parent is already open and falls back to a launch-rect open when
+    // it's not.
+    swapTo(ref, event.currentTarget.getBoundingClientRect())
   }
 
   return (

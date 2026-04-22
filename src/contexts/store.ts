@@ -25,19 +25,52 @@ export type LaunchOrigin = {
   seq: number
 }
 
+/**
+ * Choreographed swap between two existing contexts (manage <-> editor and
+ * other "loop" relationships). Runs in two sequential phases so the
+ * hand-off reads clearly rather than as a cross-fade:
+ *
+ *   phase 'exit'  — the outgoing tile scales identity → cell while the
+ *                   incoming tile sits parked at its cell.
+ *   phase 'enter' — the incoming tile scales cell → identity while the
+ *                   outgoing tile stays parked at its cell.
+ *
+ * Distinct from the launch-rect animation, which is for spawning a
+ * brand-new context from a click target.
+ */
+export type LoopSwap = {
+  fromId: string
+  toId: string
+  phase: "exit" | "enter"
+  seq: number
+}
+
+const LOOP_EXIT_MS = 240
+const LOOP_ENTER_MS = 240
+
 let launchSeqCounter = 0
+let loopSwapSeqCounter = 0
 
 type State = {
   openContexts: Context[]
   activeId: string | null
   closedRecents: ClosedRecent[]
   pendingLaunch: LaunchOrigin | null
+  loopSwap: LoopSwap | null
 }
 
 const RECENTS_CAP = 5
 
 type Actions = {
   open: (ref: ContextRef, originRect?: DOMRect | null) => string
+  /**
+   * Open `ref` with loop-swap semantics. If both source (current active)
+   * and destination (existing context matching `ref`) exist and are
+   * distinct, runs the choreographed two-tile swap. Otherwise falls back
+   * to plain `open()` so the launch-rect animation still happens for
+   * first-time opens. Returns the resulting context id.
+   */
+  swapTo: (ref: ContextRef, originRect?: DOMRect | null) => string
   close: (id: string) => void
   closeOthers: (id: string) => void
   closeAll: () => void
@@ -97,6 +130,7 @@ export const useContexts = create<Store>((set, get) => ({
   activeId: null,
   closedRecents: [],
   pendingLaunch: null,
+  loopSwap: null,
 
   open: (incoming, originRect) => {
     const ref = withDefaults(incoming)
@@ -153,6 +187,78 @@ export const useContexts = create<Store>((set, get) => ({
     })
     syncHash(newCtx)
     return newCtx.id
+  },
+
+  swapTo: (incoming, originRect) => {
+    const ref = withDefaults(incoming)
+    const state = get()
+    const existing = findExisting(state.openContexts, ref)
+    const fromCtx = state.activeId
+      ? state.openContexts.find((c) => c.id === state.activeId) ?? null
+      : null
+
+    // Fallback: if either side of the loop is missing, or we'd swap a
+    // context with itself, defer to the regular launch-rect open path.
+    if (!existing || !fromCtx || existing.id === fromCtx.id) {
+      return get().open(ref, originRect)
+    }
+
+    const now = Date.now()
+    const nextParams = ref.params ?? existing.params
+    const nextTitle = titleFor({ ...ref, params: nextParams })
+    const updated = state.openContexts.map((c) =>
+      c.id === existing.id
+        ? { ...c, params: nextParams, title: nextTitle, lastFocusedAt: now }
+        : c
+    )
+    const updatedExisting = updated.find((c) => c.id === existing.id)!
+
+    // Coalesce: if a swap is already running, the new active flips
+    // instantly with no fresh choreography. Keeps rapid clicks feeling
+    // responsive instead of stacking animations.
+    // Reduced motion: the swap relies on CSS transitions to fill both
+    // phases. Without them the tiles would hop between poses with dead
+    // air in between, which is worse than an instant cut. Skip straight
+    // to the post-swap state.
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const animate = state.loopSwap == null && !reducedMotion
+    const seq = animate
+      ? ++loopSwapSeqCounter
+      : state.loopSwap?.seq ?? ++loopSwapSeqCounter
+    const nextLoopSwap: LoopSwap | null = animate
+      ? {
+          fromId: fromCtx.id,
+          toId: existing.id,
+          phase: "exit",
+          seq,
+        }
+      : state.loopSwap
+
+    set({
+      openContexts: updated,
+      activeId: existing.id,
+      // Suppress launch-rect animation while a swap is choreographed —
+      // they're competing visual stories about the same transition.
+      pendingLaunch: null,
+      loopSwap: nextLoopSwap,
+    })
+    syncHash(updatedExisting)
+
+    if (animate && typeof window !== "undefined") {
+      window.setTimeout(() => {
+        const s = get()
+        if (s.loopSwap?.seq !== seq) return
+        set({ loopSwap: { ...s.loopSwap!, phase: "enter" } })
+      }, LOOP_EXIT_MS)
+      window.setTimeout(() => {
+        const s = get()
+        if (s.loopSwap?.seq !== seq) return
+        set({ loopSwap: null })
+      }, LOOP_EXIT_MS + LOOP_ENTER_MS)
+    }
+    return existing.id
   },
 
   close: (id) => {

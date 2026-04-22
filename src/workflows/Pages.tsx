@@ -77,6 +77,7 @@ function isViewKey(value: unknown): value is ViewKey {
 
 export function Pages({ ctx }: { ctx: Context }) {
   const open = useContexts((s) => s.open)
+  const swapTo = useContexts((s) => s.swapTo)
   const rawView = ctx.params?.view
   const view: ViewKey = isViewKey(rawView) ? rawView : "all"
   const counts = useMemo(() => statusCounts(), [])
@@ -132,17 +133,24 @@ export function Pages({ ctx }: { ctx: Context }) {
     page: PageRow,
     options: { pinned?: boolean; rect?: DOMRect | null } = {}
   ) {
-    open(
-      {
-        type: "editor",
-        params: {
-          kind: "page",
-          id: page.id,
-          ...(options.pinned ? { instanceId: page.id } : {}),
-        },
+    const ref = {
+      type: "editor" as const,
+      params: {
+        kind: "page" as const,
+        id: page.id,
+        ...(options.pinned ? { instanceId: page.id } : {}),
       },
-      options.rect ?? null
-    )
+    }
+    // Pinned spawns a fresh singleton; that's a "new context" event, not a
+    // loop step, so keep the launch-rect animation. Default opens pass
+    // through swapTo: if the default Editor is already open it choreographs
+    // the manage ↔ editor loop swap, otherwise it falls back to a normal
+    // launch-rect open.
+    if (options.pinned) {
+      open(ref, options.rect ?? null)
+    } else {
+      swapTo(ref, options.rect ?? null)
+    }
   }
 
   function handleTitleClick(
@@ -157,7 +165,7 @@ export function Pages({ ctx }: { ctx: Context }) {
   }
 
   function handleAddNew(event: React.MouseEvent<HTMLButtonElement>) {
-    open(
+    swapTo(
       {
         type: "editor",
         params: { kind: "page", id: "new" },

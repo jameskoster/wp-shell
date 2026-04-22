@@ -7,7 +7,11 @@ import {
 } from "@/contexts/store"
 import { useUI } from "./uiStore"
 import { ContextTile } from "./ContextTile"
-import { computeStackLayout, type Cell } from "./stageLayout"
+import {
+  computeLoopSwapLayout,
+  computeStackLayout,
+  type Cell,
+} from "./stageLayout"
 import { shortcutLabel } from "./useShortcuts"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Dashboard } from "@/workflows"
@@ -64,6 +68,7 @@ export function ContextStage() {
   // harmless, and clearing it mid-launch races the tile's two-rAF release
   // and strands the surface at the trigger rect.
   const pendingLaunch = useContexts((s) => s.pendingLaunch)
+  const loopSwap = useContexts((s) => s.loopSwap)
 
   useEffect(() => {
     const el = stageRef.current
@@ -185,6 +190,18 @@ export function ContextStage() {
     return map
   }, [ordered])
 
+  // Loop-swap layout: precomputed once per stage size + swap pair so both
+  // participants get stable cell coordinates for the duration of the
+  // animation. The swap is short (≈280ms) and the layout doesn't react to
+  // scroll, so memoising on stage size alone is enough.
+  const loopSwapLayout = useMemo(
+    () =>
+      loopSwap && stageRect.w > 0 && stageRect.h > 0
+        ? computeLoopSwapLayout(stageRect.w, stageRect.h)
+        : null,
+    [loopSwap, stageRect.w, stageRect.h],
+  )
+
   const homeIsActive = active === null
   const showHomeHint = switcherOpen && ordered.length === 0
 
@@ -198,7 +215,9 @@ export function ContextStage() {
     >
       <div
         className={`absolute inset-0 z-0 flex motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
-          switcherOpen ? "opacity-40 blur-sm" : "opacity-100 blur-0"
+          switcherOpen || loopSwap
+            ? "opacity-40 blur-sm"
+            : "opacity-100 blur-0"
         }`}
         aria-hidden={!homeIsActive && !switcherOpen}
         inert={!homeIsActive && !switcherOpen}
@@ -228,6 +247,21 @@ export function ContextStage() {
           ? buildLaunchTransform(pendingLaunch!.rect, stageRect)
           : null
         const launchSeq = isLaunching ? pendingLaunch!.seq : null
+
+        let loopSwapRole: "from" | "to" | null = null
+        let loopSwapCell: Cell | null = null
+        if (loopSwap && loopSwapLayout) {
+          if (ctx.id === loopSwap.fromId) {
+            loopSwapRole = "from"
+            loopSwapCell = loopSwapLayout.from
+          } else if (ctx.id === loopSwap.toId) {
+            loopSwapRole = "to"
+            loopSwapCell = loopSwapLayout.to
+          }
+        }
+        const loopSwapPhase = loopSwapRole ? loopSwap!.phase : null
+        const loopSwapSeq = loopSwapRole ? loopSwap!.seq : null
+
         return (
           <ContextTile
             key={ctx.id}
@@ -240,6 +274,10 @@ export function ContextStage() {
             instantTransform={scrolling}
             launchTransform={launchTransform}
             launchSeq={launchSeq}
+            loopSwapRole={loopSwapRole}
+            loopSwapPhase={loopSwapPhase}
+            loopSwapCell={loopSwapCell}
+            loopSwapSeq={loopSwapSeq}
             onSelect={() => {
               focus(ctx.id)
               closeOverlay()
