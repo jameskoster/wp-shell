@@ -25,7 +25,9 @@ export function Shell() {
   }, [hydrate])
 
   useEffect(() => {
-    document.title = active ? `${active.title} — WP Shell` : "Home — WP Shell"
+    document.title = active
+      ? `${active.title} — WP Shell`
+      : "Dashboard — WP Shell"
   }, [active])
 
   return (
@@ -47,7 +49,7 @@ export function Shell() {
             : undefined
         }
         role={switcherOpen ? "button" : undefined}
-        aria-label={switcherOpen ? "Return home" : undefined}
+        aria-label={switcherOpen ? "Go to Dashboard" : undefined}
       >
         <div
           className={`motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
@@ -63,7 +65,7 @@ export function Shell() {
       </div>
       <main
         id="main"
-        aria-label={active ? active.title : "Home"}
+        aria-label={active ? active.title : "Dashboard"}
         className="relative flex flex-1 min-h-0 overflow-hidden"
       >
         <ContextStage />

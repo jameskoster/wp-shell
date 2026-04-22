@@ -95,14 +95,11 @@ export function CommandPalette() {
                         return (
                           <CommandItem
                             key="home"
-                            value="Home Dashboard"
+                            value="Dashboard Home"
                             onClick={handleHome}
                           >
                             <HomeIcon className="size-4 text-muted-foreground" />
-                            <span>Home</span>
-                            <span className="ms-auto text-xs text-muted-foreground/72">
-                              Your dashboard
-                            </span>
+                            <span>Dashboard</span>
                           </CommandItem>
                         )
                       }

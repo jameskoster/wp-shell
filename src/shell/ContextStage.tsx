@@ -211,7 +211,7 @@ export function ContextStage() {
       className="relative isolate flex-1 overflow-hidden"
       data-switcher-open={switcherOpen ? "" : undefined}
       role={switcherOpen ? "region" : undefined}
-      aria-label={switcherOpen ? "Open contexts" : undefined}
+      aria-label={switcherOpen ? "Open workspaces" : undefined}
     >
       <div
         className={`absolute inset-0 z-0 flex motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
@@ -232,7 +232,7 @@ export function ContextStage() {
             goHome()
             closeOverlay()
           }}
-          aria-label="Return home"
+          aria-label="Go to Dashboard"
           className="absolute inset-0 z-10 cursor-default outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
         />
       ) : null}
@@ -306,9 +306,9 @@ export function ContextStage() {
 
       <span aria-live="polite" className="sr-only">
         {switcherOpen
-          ? `Switcher open. ${ordered.length} ${
-              ordered.length === 1 ? "context" : "contexts"
-            }. Tap empty space to return home.`
+          ? `Workspaces open. ${ordered.length} ${
+              ordered.length === 1 ? "workspace" : "workspaces"
+            }. Tap empty space to return to Dashboard.`
           : ""}
       </span>
     </div>

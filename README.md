@@ -1,8 +1,8 @@
 # WordPress Shell — Prototype
 
 A standalone web prototype of a reimagined WordPress admin **shell**: a persistent
-structural layer (admin bar + workspace region) built around **role-based
-dashboards**, **navigation as flow**, and a **context-switching** model that
+structural layer (admin bar + stage region) built around **role-based
+dashboards**, **navigation as flow**, and a **Workspaces** model that
 treats every destination as a first-class, multitaskable surface.
 
 This repo implements **slice 1** of the plan in
@@ -23,7 +23,12 @@ npm run build  # type-check + production build
 
 ## Concepts
 
-### Home and contexts
+### Dashboard and contexts
+
+> **Note on vocabulary:** "context" is the internal data model name used
+> throughout the codebase. Users see it as **Workspaces** in the chrome
+> (admin bar button, tooltip, AI copy, menus). Architecture docs below use
+> "context"; product copy uses "workspace".
 
 The model has two layers, deliberately distinct (think iOS):
 
@@ -172,25 +177,25 @@ all four kinds.
 
 ### Shell chrome
 
-- **Admin bar** — brand (dual-purpose: returns home when ≤1 context is open,
-  toggles the switcher when ≥2 are open; gets a small dot indicator in the
-  latter state), site menu, global search / palette trigger, notifications,
-  AI sheet, user menu. The admin bar fades out (and becomes inert) while the
-  switcher is open; clicking anywhere in its region returns home and
-  dismisses the switcher.
+- **Admin bar** — brand (always goes to Dashboard), Workspaces button
+  (only visible when ≥2 workspaces are open; opens the Workspaces overlay),
+  site menu, global search / palette trigger, notifications, AI sheet,
+  user menu. The admin bar fades out (and becomes inert) while Workspaces
+  is open; clicking anywhere in its region returns to Dashboard and
+  dismisses the overlay.
 - **Command palette** (`⌘K` / `Ctrl+K`) — wraps coss `Command`. Two
-  sections: *Recent* (recently closed contexts) and *Go to* (Home + all
-  known destinations).
-- **Context switcher** (`⌘\`` / `Ctrl+\``) — iOS-style horizontal stack.
+  sections: *Recent* (recently closed workspaces) and *Go to* (Dashboard +
+  all known destinations).
+- **Workspaces** (`⌘\`` / `Ctrl+\``) — iOS-style horizontal stack.
   The active surface scales down to its slot at the right edge, and the
-  other open contexts line up to its left in recency order (see "Context
+  other open workspaces line up to its left in recency order (see "Context
   stage" below). Free horizontal scroll via wheel/trackpad; arrow keys
   snap to focused tile. Enter selects, Esc dismisses, tap on empty space
-  (including the admin bar) returns home.
+  (including the admin bar) returns to Dashboard.
 
 ### Context stage
 
-The workspace region (`src/shell/ContextStage.tsx`) renders three layers:
+The stage region (`src/shell/ContextStage.tsx`) renders three layers:
 
 1. **Home plane** — the `Dashboard` component, always mounted at the back,
    visible whenever no context is active and glimpsed (faded + slightly
@@ -228,8 +233,8 @@ and stay live. Trade-offs:
 | Shortcut       | Action                              |
 | -------------- | ----------------------------------- |
 | `⌘K`           | Toggle command palette              |
-| `⌘\``          | Toggle context switcher             |
-| `Alt+1…9`      | Jump to nth context (focus order)   |
+| `⌘\``          | Toggle Workspaces                   |
+| `Alt+1…9`      | Jump to nth workspace (focus order) |
 | `Esc`          | Close any open overlay              |
 
 (`⌘` / `Ctrl` is platform-aware via `useShortcuts.ts`.)

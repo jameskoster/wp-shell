@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ExternalLink,
   FileText,
+  Layers,
   PackagePlus,
   Search,
   Sparkles,
@@ -27,6 +28,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
+  Tooltip,
+  TooltipPopup,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   Sheet,
   SheetClose,
   SheetDescription,
@@ -37,6 +43,7 @@ import {
 } from "@/components/ui/sheet"
 import { useUI } from "./uiStore"
 import {
+  useActiveContext,
   useClosedRecents,
   useContexts,
   useOpenContexts,
@@ -52,44 +59,72 @@ export function AdminBar() {
   const goHome = useContexts((s) => s.goHome)
   const closedRecents = useClosedRecents()
   const openCount = useOpenContexts().length
+  const dashboardActive = useActiveContext() === null
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-1 border-b bg-card px-2">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => {
-          if (openCount >= 2) toggle("switcher")
-          else goHome()
-        }}
-        aria-label={
-          openCount >= 2
-            ? `Open switcher · ${openCount} contexts`
-            : "Return home"
-        }
-        className="relative"
-      >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
-        >
-          <path
-            d="M22 12C22 6.49 17.51 2 12 2C6.48 2 2 6.49 2 12C2 17.52 6.48 22 12 22C17.51 22 22 17.52 22 12ZM9.78 17.37L6.37 8.22C6.92 8.2 7.54 8.14 7.54 8.14C8.04 8.08 7.98 7.01 7.48 7.03C7.48 7.03 6.03 7.14 5.11 7.14C4.93 7.14 4.74 7.14 4.53 7.13C6.12 4.69 8.87 3.11 12 3.11C14.33 3.11 16.45 3.98 18.05 5.45C17.37 5.34 16.4 5.84 16.4 7.03C16.4 7.77 16.85 8.39 17.3 9.13C17.65 9.74 17.85 10.49 17.85 11.59C17.85 13.08 16.45 16.59 16.45 16.59L13.42 8.22C13.96 8.2 14.24 8.05 14.24 8.05C14.74 8 14.68 6.8 14.18 6.83C14.18 6.83 12.74 6.95 11.8 6.95C10.93 6.95 9.47 6.83 9.47 6.83C8.97 6.8 8.91 8.03 9.41 8.05L10.33 8.13L11.59 11.54L9.78 17.37ZM19.41 12C19.65 11.36 20.15 10.13 19.84 7.75C20.54 9.04 20.89 10.46 20.89 12C20.89 15.29 19.16 18.24 16.49 19.78C17.46 17.19 18.43 14.58 19.41 12ZM8.1 20.09C5.12 18.65 3.11 15.53 3.11 12C3.11 10.7 3.34 9.52 3.83 8.41C5.25 12.3 6.67 16.2 8.1 20.09ZM12.13 13.46L14.71 20.44C13.85 20.73 12.95 20.89 12 20.89C11.21 20.89 10.43 20.78 9.71 20.56C10.52 18.18 11.33 15.82 12.13 13.46Z"
-            fill="currentColor"
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => goHome()}
+              aria-label="Go to Dashboard"
+              aria-current={dashboardActive ? "page" : undefined}
+              className={
+                dashboardActive ? "bg-accent text-accent-foreground" : undefined
+              }
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden
+              >
+                <g clipPath="url(#clip0_56_522)">
+                  <path
+                    d="M24 12C24 5.388 18.612 0 12 0C5.376 0 0 5.388 0 12C0 18.624 5.376 24 12 24C18.612 24 24 18.624 24 12ZM9.336 18.444L5.244 7.464C5.904 7.44 6.648 7.368 6.648 7.368C7.248 7.296 7.176 6.012 6.576 6.036C6.576 6.036 4.836 6.168 3.732 6.168C3.516 6.168 3.288 6.168 3.036 6.156C4.944 3.228 8.244 1.332 12 1.332C14.796 1.332 17.34 2.376 19.26 4.14C18.444 4.008 17.28 4.608 17.28 6.036C17.28 6.924 17.82 7.668 18.36 8.556C18.78 9.288 19.02 10.188 19.02 11.508C19.02 13.296 17.34 17.508 17.34 17.508L13.704 7.464C14.352 7.44 14.688 7.26 14.688 7.26C15.288 7.2 15.216 5.76 14.616 5.796C14.616 5.796 12.888 5.94 11.76 5.94C10.716 5.94 8.964 5.796 8.964 5.796C8.364 5.76 8.292 7.236 8.892 7.26L9.996 7.356L11.508 11.448L9.336 18.444ZM20.892 12C21.18 11.232 21.78 9.756 21.408 6.9C22.248 8.448 22.668 10.152 22.668 12C22.668 15.948 20.592 19.488 17.388 21.336C18.552 18.228 19.716 15.096 20.892 12ZM7.32 21.708C3.744 19.98 1.332 16.236 1.332 12C1.332 10.44 1.608 9.024 2.196 7.692C3.9 12.36 5.604 17.04 7.32 21.708ZM12.156 13.752L15.252 22.128C14.22 22.476 13.14 22.668 12 22.668C11.052 22.668 10.116 22.536 9.252 22.272C10.224 19.416 11.196 16.584 12.156 13.752Z"
+                    fill="currentColor"
+                  />
+                </g>
+                <defs>
+                  <clipPath id="clip0_56_522">
+                    <rect width="24" height="24" fill="white" />
+                  </clipPath>
+                </defs>
+              </svg>
+            </Button>
+          }
+        />
+        <TooltipPopup side="bottom" sideOffset={6}>
+          Dashboard
+        </TooltipPopup>
+      </Tooltip>
+
+      {openCount >= 2 ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => toggle("switcher")}
+                aria-label={`Workspaces · ${openCount} open`}
+                className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-2 motion-safe:duration-300"
+              >
+                <Layers />
+              </Button>
+            }
           />
-        </svg>
-        {openCount >= 2 ? (
-          <span
-            aria-hidden
-            className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary ring-2 ring-card"
-          />
-        ) : null}
-      </Button>
+          <TooltipPopup side="bottom" sideOffset={6}>
+            Workspaces
+          </TooltipPopup>
+        </Tooltip>
+      ) : null}
 
       <Menu>
         <MenuTrigger
@@ -362,7 +397,7 @@ export function AdminBar() {
             <Sparkles className="mb-3 size-6" />
             <p>The AI panel will live here.</p>
             <p className="mt-1 text-xs">
-              In future slices it would summarize the active context, suggest
+              In future slices it would summarize the active workspace, suggest
               actions, and help compose content.
             </p>
           </div>

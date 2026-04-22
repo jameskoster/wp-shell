@@ -5,7 +5,7 @@ export function Orders() {
   return (
     <StubWorkflow
       title="Orders"
-      description="Track, fulfill, and manage incoming orders. This is a singleton context — opening it again focuses the existing one."
+      description="Track, fulfill, and manage incoming orders. This is a singleton workspace — opening it again focuses the existing one."
       icon={ShoppingBag}
     />
   )

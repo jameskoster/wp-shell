@@ -321,7 +321,7 @@ export function Pages({ ctx }: { ctx: Context }) {
                                 openInEditor(page, { pinned: true })
                               }
                             >
-                              Open in new context
+                              Open in new workspace
                             </MenuItem>
                             <MenuItem disabled>View</MenuItem>
                             <MenuSeparator />
