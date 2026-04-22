@@ -48,6 +48,7 @@ import {
   useContexts,
   useOpenContexts,
 } from "@/contexts/store"
+import { refKey } from "@/contexts/url"
 import { NOTIFICATIONS } from "@/mocks/notifications"
 import { USER } from "@/mocks/user"
 import { OTHER_SITES, SITE } from "@/mocks/site"
@@ -59,8 +60,30 @@ export function AdminBar() {
   const goHome = useContexts((s) => s.goHome)
   const closedRecents = useClosedRecents()
   const openCount = useOpenContexts().length
-  const dashboardActive = useActiveContext() === null
+  const active = useActiveContext()
+  const dashboardActive = active === null
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length
+
+  /**
+   * If the active context maps to a dashboard launch tile, resolve its
+   * rect so the surface can play the reverse-launch animation back into
+   * the tile. Falls back to no rect (instant home) for contexts with no
+   * launch tile, or when the dashboard isn't currently in the DOM at the
+   * size we expect.
+   */
+  const handleGoHome = () => {
+    if (!active) {
+      goHome()
+      return
+    }
+    const key = refKey({ type: active.type, params: active.params })
+    const el =
+      typeof document !== "undefined"
+        ? document.querySelector<HTMLElement>(`[data-launch-key="${key}"]`)
+        : null
+    const rect = el?.getBoundingClientRect()
+    goHome(rect && rect.width > 0 && rect.height > 0 ? rect : null)
+  }
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-1 border-b bg-card px-2">
@@ -70,7 +93,7 @@ export function AdminBar() {
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={() => goHome()}
+              onClick={handleGoHome}
               aria-label="Go to Dashboard"
               aria-current={dashboardActive ? "page" : undefined}
               className={

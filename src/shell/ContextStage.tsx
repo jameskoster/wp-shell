@@ -52,6 +52,7 @@ export function ContextStage() {
   const focus = useContexts((s) => s.focus)
   const close = useContexts((s) => s.close)
   const goHome = useContexts((s) => s.goHome)
+  const clearPendingHome = useContexts((s) => s.clearPendingHome)
   const closeOverlay = useUI((s) => s.close)
 
   const stageRef = useRef<HTMLDivElement>(null)
@@ -68,6 +69,7 @@ export function ContextStage() {
   // harmless, and clearing it mid-launch races the tile's two-rAF release
   // and strands the surface at the trigger rect.
   const pendingLaunch = useContexts((s) => s.pendingLaunch)
+  const pendingHome = useContexts((s) => s.pendingHome)
   const loopSwap = useContexts((s) => s.loopSwap)
 
   useEffect(() => {
@@ -101,6 +103,15 @@ export function ContextStage() {
       setScrolling(false)
     }
   }, [switcherOpen])
+
+  // The home animation leaves `pendingHome` parked in its 'done' phase so
+  // the surface stays invisible at the launch tile rect (instead of
+  // sliding to PARK). Opening the switcher means the user has moved past
+  // that handoff — drop the override so the tile rejoins the row and
+  // becomes visible at its cell.
+  useEffect(() => {
+    if (switcherOpen) clearPendingHome()
+  }, [switcherOpen, clearPendingHome])
 
   // Clamp scroll if the layout shrinks (e.g. a context closes).
   useEffect(() => {
@@ -248,6 +259,13 @@ export function ContextStage() {
           : null
         const launchSeq = isLaunching ? pendingLaunch!.seq : null
 
+        const isHoming =
+          pendingHome?.id === ctx.id && stageRect.w > 0 && stageRect.h > 0
+        const homeTransform = isHoming
+          ? buildLaunchTransform(pendingHome!.rect, stageRect)
+          : null
+        const homePhase = isHoming ? pendingHome!.phase : null
+
         let loopSwapRole: "from" | "to" | null = null
         let loopSwapCell: Cell | null = null
         if (loopSwap && loopSwapLayout) {
@@ -274,6 +292,8 @@ export function ContextStage() {
             instantTransform={scrolling}
             launchTransform={launchTransform}
             launchSeq={launchSeq}
+            homeTransform={homeTransform}
+            homePhase={homePhase}
             loopSwapRole={loopSwapRole}
             loopSwapPhase={loopSwapPhase}
             loopSwapCell={loopSwapCell}

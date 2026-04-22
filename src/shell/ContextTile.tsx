@@ -22,6 +22,15 @@ type Props = {
   // already-active context still pings.
   launchTransform?: string | null
   launchSeq?: number | null
+  // Reverse-launch ("home") animation. Mirrors `launchTransform`: while
+  // set, the surface uses this transform as its target so it can contract
+  // back into the dashboard launch tile rect that opened it. The standard
+  // transition handles the identity → rect interpolation; once the home
+  // animation completes (`homePhase === 'done'`), the surface is held at
+  // the rect with opacity 0 so it stays out of sight without sliding to
+  // the park position.
+  homeTransform?: string | null
+  homePhase?: "animate" | "done" | null
   // Loop-swap participation — this tile is one of the two tiles in a
   // choreographed manage <-> editor swap. Runs in two sequential phases:
   //   'exit'  — from: identity → cell; to: snapped at cell (waiting).
@@ -58,6 +67,8 @@ export function ContextTile({
   instantTransform = false,
   launchTransform = null,
   launchSeq = null,
+  homeTransform = null,
+  homePhase = null,
   loopSwapRole = null,
   loopSwapPhase = null,
   loopSwapCell = null,
@@ -134,7 +145,16 @@ export function ContextTile({
   }, [loopSwapSeq])
 
   // Surface transform — single source of truth for the tile's visual bounds.
-  // Precedence: launch snap > loop snap > loop role > switcher > active > parked.
+  // Precedence: launch snap > home > loop snap > loop role > switcher > active > parked.
+  //
+  // Home flow (reverse of launch):
+  //   phase 'animate' — surface transitions from identity (its previous
+  //     pose as the active tile) to the launch tile rect. activeId is
+  //     already cleared in the store, so without this override the surface
+  //     would slide to PARK instead.
+  //   phase 'done'    — surface held at the rect, opacity 0, no transition.
+  //     Keeps it pinned where the dashboard's own launch tile sits, so the
+  //     handoff is invisible until the next open() clears pendingHome.
   //
   // Loop swap flow:
   //   from, phase 'exit'   → cell (animates identity → cell; prev DOM was identity)
@@ -144,6 +164,8 @@ export function ContextTile({
   let surfaceTransform: string
   if (launchOverride) {
     surfaceTransform = launchOverride
+  } else if (homeTransform) {
+    surfaceTransform = homeTransform
   } else if (loopSnapTransform) {
     surfaceTransform = loopSnapTransform
   } else if (loopSwapRole === "from" && loopSwapCell) {
@@ -197,7 +219,8 @@ export function ContextTile({
   }
 
   const inLoopSwap = !!loopSwapRole
-  const surfaceVisible = switcherOpen || isActive || inLoopSwap
+  const isHoming = !!homeTransform
+  const surfaceVisible = switcherOpen || isActive || inLoopSwap || isHoming
 
   // Single transition spec used by both surface and chrome so they stay in
   // lock-step. Disabled during scroll (direct wheel input) and during the
@@ -205,16 +228,35 @@ export function ContextTile({
   // Inactive tiles sliding out to PARK get a slower duration: they cover a
   // much longer distance (full row width) than the active tile growing to
   // fullscreen, and 300ms made the slide-out blink past too quickly.
+  // The home animation gets the same 300ms as launch so the open and close
+  // motions feel symmetrical.
   const transitionDuration =
-    inLoopSwap
+    inLoopSwap || isHoming
       ? "motion-safe:duration-300"
       : !switcherOpen && !isActive
         ? "motion-safe:duration-500"
         : "motion-safe:duration-300"
+  // 'done' phase pins the surface invisibly at the rect — no transition so
+  // the opacity stays at 0 without re-animating once it's already faded.
+  const homeDoneSnap = homePhase === "done"
   const transitionClass =
-    instantTransform || snapping || loopSnapping
+    instantTransform || snapping || loopSnapping || homeDoneSnap
       ? ""
       : `motion-safe:transition-[transform,width,height,opacity,border-radius] ${transitionDuration} motion-safe:ease-glide`
+  // Override the bulk transition's opacity timing for the home animation
+  // so the surface stays opaque while it's still big — and only dissolves
+  // in the final stretch as it lands on the launch tile. Without this the
+  // dashboard shows through a half-transparent surface for the full 300ms,
+  // which reads as ghostly rather than as a handoff.
+  const surfaceTransitionStyle =
+    isHoming && !homeDoneSnap
+      ? {
+          transitionProperty: "transform, width, height, opacity, border-radius",
+          transitionDuration: "300ms, 300ms, 300ms, 180ms, 300ms",
+          transitionDelay: "0ms, 0ms, 0ms, 120ms, 0ms",
+          transitionTimingFunction: "var(--ease-glide)",
+        }
+      : null
 
   // The surface is `transform: scale()`d, which scales its border-radius
   // too. To make the visible corners match the chrome's 8px `rounded-lg`,
@@ -231,6 +273,10 @@ export function ContextTile({
   ) {
     surfaceBorderRadius = loopSwapCell ? 8 / loopSwapCell.scale : 0
   } else if (loopSwapRole === "to" && loopSwapPhase === "enter") {
+    surfaceBorderRadius = 0
+  } else if (isHoming) {
+    // Match the launch animation: radius stays at 0 throughout, so the
+    // open and close motions look like the same shape played in reverse.
     surfaceBorderRadius = 0
   } else if (isActive && !switcherOpen) {
     surfaceBorderRadius = 0
@@ -256,6 +302,11 @@ export function ContextTile({
     } else {
       surfaceZ = loopSwapRole === "from" ? 26 : 21
     }
+  } else if (isHoming) {
+    // Keep the homing surface on top throughout the contraction so it
+    // covers the (already-rendered) dashboard underneath until it lands
+    // on the launch tile rect.
+    surfaceZ = 25
   } else {
     surfaceZ = !switcherOpen && isActive ? 25 : 20
   }
@@ -267,13 +318,19 @@ export function ContextTile({
         style={{
           transform: surfaceTransform,
           borderRadius: surfaceBorderRadius,
+          opacity: isHoming ? 0 : 1,
           pointerEvents:
-            switcherOpen || inLoopSwap ? "none" : isActive ? "auto" : "none",
+            switcherOpen || inLoopSwap || isHoming
+              ? "none"
+              : isActive
+                ? "auto"
+                : "none",
           willChange: "transform",
           zIndex: surfaceZ,
+          ...surfaceTransitionStyle,
         }}
         aria-hidden={!surfaceVisible}
-        inert={!surfaceVisible || inLoopSwap}
+        inert={!surfaceVisible || inLoopSwap || isHoming}
       >
         <div className="flex h-full w-full flex-col">
           <ContextSurface ctx={ctx} />

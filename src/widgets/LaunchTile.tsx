@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
+import { refKey } from "@/contexts/url"
 import type { LaunchTileWidget } from "./types"
 import { WidgetMenu } from "./WidgetMenu"
 
@@ -13,6 +14,7 @@ export function LaunchTile({ widget }: { widget: LaunchTileWidget }) {
         render={
           <button
             type="button"
+            data-launch-key={refKey(widget.action)}
             onClick={(e) =>
               open(widget.action, e.currentTarget.getBoundingClientRect())
             }

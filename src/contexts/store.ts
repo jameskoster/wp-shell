@@ -26,6 +26,25 @@ export type LaunchOrigin = {
 }
 
 /**
+ * Reverse of LaunchOrigin: when the user goes Home from a context whose
+ * dashboard launch tile is known, the surface contracts back into that
+ * tile rect instead of sliding off-screen. Two phases so the surface can
+ * fade itself out once it has reached the tile, leaving the dashboard's
+ * own launch tile to take over visually.
+ *
+ *   phase 'animate' — surface transitions identity → rect (visible).
+ *   phase 'done'    — surface snapped at rect, opacity 0 (invisible).
+ */
+export type HomeOrigin = {
+  id: string
+  rect: { left: number; top: number; width: number; height: number }
+  seq: number
+  phase: "animate" | "done"
+}
+
+const HOME_ANIM_MS = 320
+
+/**
  * Choreographed swap between two existing contexts (manage <-> editor and
  * other "loop" relationships). Runs in two sequential phases so the
  * hand-off reads clearly rather than as a cross-fade:
@@ -50,12 +69,14 @@ const LOOP_ENTER_MS = 240
 
 let launchSeqCounter = 0
 let loopSwapSeqCounter = 0
+let homeSeqCounter = 0
 
 type State = {
   openContexts: Context[]
   activeId: string | null
   closedRecents: ClosedRecent[]
   pendingLaunch: LaunchOrigin | null
+  pendingHome: HomeOrigin | null
   loopSwap: LoopSwap | null
 }
 
@@ -75,9 +96,23 @@ type Actions = {
   closeOthers: (id: string) => void
   closeAll: () => void
   focus: (id: string) => void
-  goHome: () => void
+  /**
+   * Send the active context home. When `originRect` is provided (typically
+   * the bounding rect of the dashboard launch tile that maps to the active
+   * context), the surface plays a reverse-launch animation — contracting
+   * into that rect instead of sliding off-screen. Without a rect, falls
+   * back to an instant home with no choreography.
+   */
+  goHome: (originRect?: DOMRect | null) => void
   hydrateFromHash: () => void
   consumeLaunch: () => void
+  /**
+   * Drop any in-flight or completed home override. Called when the user
+   * does something that supersedes the "we just went home" state — e.g.
+   * opening the workspace switcher — so a stale `pendingHome` doesn't
+   * keep the previously-active tile pinned invisibly.
+   */
+  clearPendingHome: () => void
 }
 
 type Store = State & Actions
@@ -130,6 +165,7 @@ export const useContexts = create<Store>((set, get) => ({
   activeId: null,
   closedRecents: [],
   pendingLaunch: null,
+  pendingHome: null,
   loopSwap: null,
 
   open: (incoming, originRect) => {
@@ -176,6 +212,10 @@ export const useContexts = create<Store>((set, get) => ({
         openContexts: updated,
         activeId: existing.id,
         pendingLaunch: launchFor(existing.id),
+        // A fresh open supersedes any in-flight home animation for this
+        // context — the surface should spring out of the trigger rect, not
+        // linger at the previous home rect.
+        pendingHome: null,
       })
       syncHash(updatedExisting)
       return existing.id
@@ -193,6 +233,7 @@ export const useContexts = create<Store>((set, get) => ({
       openContexts: [...state.openContexts, newCtx],
       activeId: newCtx.id,
       pendingLaunch: launchFor(newCtx.id),
+      pendingHome: null,
     })
     syncHash(newCtx)
     return newCtx.id
@@ -259,6 +300,7 @@ export const useContexts = create<Store>((set, get) => ({
       // Suppress launch-rect animation while a swap is choreographed —
       // they're competing visual stories about the same transition.
       pendingLaunch: null,
+      pendingHome: null,
       loopSwap: nextLoopSwap,
     })
     syncHash(updatedExisting)
@@ -328,13 +370,46 @@ export const useContexts = create<Store>((set, get) => ({
     const updated = state.openContexts.map((c) =>
       c.id === id ? { ...c, lastFocusedAt: now } : c
     )
-    set({ openContexts: updated, activeId: id })
+    set({ openContexts: updated, activeId: id, pendingHome: null })
     syncHash({ ...ctx, lastFocusedAt: now })
   },
 
-  goHome: () => {
-    set({ activeId: null })
+  goHome: (originRect) => {
+    const state = get()
+    const id = state.activeId
+    if (id == null) return
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const animate = !!originRect && !reducedMotion
+    const seq = animate ? ++homeSeqCounter : 0
+    set({
+      activeId: null,
+      pendingLaunch: null,
+      pendingHome: animate
+        ? {
+            id,
+            rect: {
+              left: originRect!.left,
+              top: originRect!.top,
+              width: originRect!.width,
+              height: originRect!.height,
+            },
+            seq,
+            phase: "animate",
+          }
+        : null,
+    })
     syncHash(null)
+    if (!animate || typeof window === "undefined") return
+    window.setTimeout(() => {
+      const s = get()
+      if (s.pendingHome?.seq !== seq) return
+      // Hold the surface invisibly at the rect so it doesn't slide off
+      // to the park position once the animation completes. Cleared on
+      // the next open()/swapTo()/focus() targeting this context.
+      set({ pendingHome: { ...s.pendingHome, phase: "done" } })
+    }, HOME_ANIM_MS)
   },
 
   hydrateFromHash: () => {
@@ -348,6 +423,10 @@ export const useContexts = create<Store>((set, get) => ({
   },
 
   consumeLaunch: () => set({ pendingLaunch: null }),
+
+  clearPendingHome: () => {
+    if (get().pendingHome != null) set({ pendingHome: null })
+  },
 }))
 
 export function useActiveContext(): Context | null {
