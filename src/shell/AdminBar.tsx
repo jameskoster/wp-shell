@@ -16,6 +16,8 @@ import {
   Menu,
   MenuItem,
   MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
   MenuSeparator,
   MenuSub,
   MenuSubPopup,
@@ -41,6 +43,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useDock, type DockPosition } from "./dockStore"
 import { useUI } from "./uiStore"
 import {
   useActiveContext,
@@ -63,6 +66,8 @@ export function AdminBar() {
   const active = useActiveContext()
   const dashboardActive = active === null
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length
+  const dockPosition = useDock((s) => s.position)
+  const setDockPosition = useDock((s) => s.setPosition)
 
   /**
    * If the active context maps to a dashboard launch tile, resolve its
@@ -257,7 +262,23 @@ export function AdminBar() {
           >
             Site settings
           </MenuItem>
-          <MenuItem disabled>Customize dashboard</MenuItem>
+          <MenuSub>
+            <MenuSubTrigger>Dock position</MenuSubTrigger>
+            <MenuSubPopup className="min-w-44">
+              <MenuRadioGroup
+                value={dockPosition}
+                onValueChange={(value) =>
+                  setDockPosition(value as DockPosition)
+                }
+              >
+                <MenuRadioItem value="left-center">Left</MenuRadioItem>
+                <MenuRadioItem value="bottom-center">Bottom</MenuRadioItem>
+                <MenuRadioItem value="right-center">Right</MenuRadioItem>
+                <MenuSeparator />
+                <MenuRadioItem value="hidden">Hidden</MenuRadioItem>
+              </MenuRadioGroup>
+            </MenuSubPopup>
+          </MenuSub>
           <MenuSeparator />
           <MenuSub>
             <MenuSubTrigger>WordPress</MenuSubTrigger>

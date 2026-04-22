@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Package,
   Palette,
+  PenSquare,
   Plug,
   Settings,
   ShoppingBag,
@@ -108,7 +109,7 @@ export const adminRecipe: Recipe = {
         {
           id: "n-posts",
           title: "Posts",
-          icon: FileText,
+          icon: PenSquare,
           action: { type: "edit-page", params: { id: "posts" }, title: "Posts" },
         },
         {

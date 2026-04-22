@@ -3,6 +3,7 @@ import { AdminBar } from "./AdminBar"
 import { CommandPalette } from "./CommandPalette"
 import { ContextSwitcher } from "./ContextSwitcher"
 import { ContextStage } from "./ContextStage"
+import { Dock } from "./Dock"
 import { useShortcuts } from "./useShortcuts"
 import { useUI } from "./uiStore"
 import {
@@ -70,6 +71,7 @@ export function Shell() {
       >
         <ContextStage />
       </main>
+      <Dock />
       <CommandPalette />
       <ContextSwitcher />
     </div>

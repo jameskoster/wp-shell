@@ -24,16 +24,22 @@ export function Dashboard() {
       })),
     [tiles]
   )
-  // TODO: dock — nav widgets currently live alongside content widgets in
-  // the iOS-style grid. Revisit promoting them into a dedicated Dock-like
-  // surface once the broader shell direction is settled.
+  // Nav widgets are now rendered by the shell-level <Dock />, so they're
+  // filtered out here to avoid double-rendering inside the grid.
   const recipeWidgets = recipe.widgets.filter(
-    (w) => w.kind !== "launch" && !isHidden(w.id)
+    (w) => w.kind !== "launch" && w.kind !== "nav" && !isHidden(w.id)
   )
   const widgets: WidgetDef[] = [...tileWidgets, ...recipeWidgets]
   return (
     <ScrollArea className="flex-1">
-      <div className="w-full px-6 py-8">
+      <div
+        className="w-full py-8"
+        style={{
+          paddingLeft: "max(1.5rem, var(--dock-inset-left, 0px))",
+          paddingRight: "max(1.5rem, var(--dock-inset-right, 0px))",
+          paddingBottom: "max(2rem, var(--dock-inset-bottom, 0px))",
+        }}
+      >
         <WidgetGrid widgets={widgets} />
       </div>
     </ScrollArea>

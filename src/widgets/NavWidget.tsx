@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils"
 import type { NavWidget as NavWidgetDef, WidgetSize } from "./types"
 import { WidgetMenu } from "./WidgetMenu"
 
-// TODO: dock — explore promoting this surface out of the widget grid into
-// an iOS/macOS-style Dock once the broader shell direction is settled.
+// Note: nav widgets are now rendered by the shell-level <Dock />. This
+// component is retained for the WidgetGrid switch but is no longer
+// instantiated by recipes that route through the Dashboard.
 export function NavWidget({
   widget,
   size = "lg",
