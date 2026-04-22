@@ -28,7 +28,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Visitors this week",
       icon: TrendingUp,
-      size: "md",
+      size: "lg",
       metric: {
         value: "12.4k",
         delta: { value: "+6.8%", trend: "up" },
@@ -41,7 +41,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Orders this week",
       icon: ShoppingBag,
-      size: "md",
+      size: "lg",
       metric: {
         value: "184",
         delta: { value: "+8", trend: "up" },
@@ -54,7 +54,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "New comments",
       icon: MessageSquare,
-      size: "md",
+      size: "lg",
       metric: {
         value: "47",
         delta: { value: "-3", trend: "down" },
@@ -67,7 +67,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Drafts in progress",
       icon: FileEdit,
-      size: "lg",
+      size: "xl",
       items: [
         { id: "d1", title: "Spring collection — preview", meta: "Edited 12m ago" },
         { id: "d2", title: "About the studio", meta: "Edited 2h ago" },
@@ -80,7 +80,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Recent activity",
       icon: Activity,
-      size: "lg",
+      size: "xl",
       items: [
         { id: "a1", title: "Marco D. published “Brass lamp”", meta: "8m ago" },
         { id: "a2", title: "Sarah K. moderated 3 comments", meta: "32m ago" },
@@ -93,7 +93,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Awaiting moderation",
       icon: MessageSquare,
-      size: "lg",
+      size: "xl",
       items: [
         { id: "m1", title: "Lee H. on “Linen tote”", meta: "“Is this restocked?”" },
         { id: "m2", title: "Anonymous on “Brass lamp”", meta: "Held — possible spam" },
@@ -103,7 +103,7 @@ export const adminRecipe: Recipe = {
     {
       id: "nav-classic",
       kind: "nav",
-      size: "lg",
+      size: "tall",
       items: [
         {
           id: "n-posts",

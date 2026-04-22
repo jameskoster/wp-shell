@@ -5,13 +5,13 @@ import {
   CardTitle,
   CardPanel,
 } from "@/components/ui/card"
-import type { AnalyticsWidget as AnalyticsWidgetDef } from "./types"
+import type { AnalyticsWidget as AnalyticsWidgetDef, WidgetSize } from "./types"
 import { WidgetMenu } from "./WidgetMenu"
 
-function Sparkline({ points }: { points: number[] }) {
+function Sparkline({ points, tall }: { points: number[]; tall?: boolean }) {
   if (points.length < 2) return null
   const w = 120
-  const h = 32
+  const h = tall ? 64 : 32
   const min = Math.min(...points)
   const max = Math.max(...points)
   const range = max - min || 1
@@ -27,7 +27,7 @@ function Sparkline({ points }: { points: number[] }) {
     <svg
       viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
-      className="h-8 w-full text-foreground/64"
+      className={`${tall ? "h-16" : "h-8"} w-full text-foreground/64`}
       role="presentation"
     >
       <path
@@ -54,12 +54,24 @@ const TREND_COLOR = {
   flat: "text-muted-foreground",
 } as const
 
-export function AnalyticsWidget({ widget }: { widget: AnalyticsWidgetDef }) {
+export function AnalyticsWidget({
+  widget,
+  size = "md",
+}: {
+  widget: AnalyticsWidgetDef
+  size?: WidgetSize
+}) {
   const Icon = widget.icon
   const TrendIcon = widget.metric.delta ? TREND_ICON[widget.metric.delta.trend] : null
   const trendColor = widget.metric.delta ? TREND_COLOR[widget.metric.delta.trend] : ""
+
+  const compact = size === "sm"
+  const showSparkline = !compact && Boolean(widget.metric.sparkline)
+  const showCaption = !compact && Boolean(widget.metric.caption)
+  const tallSparkline = size === "lg" || size === "xl"
+
   return (
-    <Card className="group h-full">
+    <Card className="group h-full overflow-hidden">
       <WidgetMenu
         widgetId={widget.id}
         className="absolute top-3 right-3 z-10"
@@ -67,10 +79,10 @@ export function AnalyticsWidget({ widget }: { widget: AnalyticsWidgetDef }) {
       <CardHeader>
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
-          {widget.title}
+          <span className="truncate">{widget.title}</span>
         </CardTitle>
       </CardHeader>
-      <CardPanel className="pt-0">
+      <CardPanel className="pt-0 flex flex-col">
         <div className="flex items-baseline gap-2">
           <span className="font-heading text-2xl font-semibold tabular-nums">
             {widget.metric.value}
@@ -82,12 +94,14 @@ export function AnalyticsWidget({ widget }: { widget: AnalyticsWidgetDef }) {
             </span>
           ) : null}
         </div>
-        {widget.metric.caption ? (
-          <p className="mt-1 text-xs text-muted-foreground">{widget.metric.caption}</p>
+        {showCaption ? (
+          <p className="mt-1 text-xs text-muted-foreground truncate">
+            {widget.metric.caption}
+          </p>
         ) : null}
-        {widget.metric.sparkline ? (
-          <div className="mt-3">
-            <Sparkline points={widget.metric.sparkline} />
+        {showSparkline ? (
+          <div className="mt-auto pt-3">
+            <Sparkline points={widget.metric.sparkline!} tall={tallSparkline} />
           </div>
         ) : null}
       </CardPanel>

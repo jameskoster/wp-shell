@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react"
 import type { ContextRef } from "@/contexts/types"
 import type { ReactNode } from "react"
 
-export type WidgetSize = "sm" | "md" | "lg"
+export type WidgetSize = "sm" | "tall" | "md" | "lg" | "xl"
 
 export type WidgetBase = {
   id: string

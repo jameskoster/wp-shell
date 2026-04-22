@@ -247,3 +247,24 @@
     @apply font-sans font-mono;
     }
 }
+
+/* iOS-style widget grid: container queries keep each cell perfectly square
+   (row height == column width) at every viewport, regardless of any
+   surrounding layout. Cell count steps with breakpoints. */
+.widget-grid {
+    container-type: inline-size;
+    display: grid;
+    gap: 1rem;
+    --cols: 4;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    grid-auto-rows: calc((100cqi - (var(--cols) - 1) * 1rem) / var(--cols));
+}
+@media (min-width: 640px) {
+    .widget-grid { --cols: 6; }
+}
+@media (min-width: 1024px) {
+    .widget-grid { --cols: 8; }
+}
+@media (min-width: 1536px) {
+    .widget-grid { --cols: 12; }
+}

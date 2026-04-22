@@ -2,10 +2,15 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
 import { refKey } from "@/contexts/url"
-import type { LaunchTileWidget } from "./types"
+import type { LaunchTileWidget, WidgetSize } from "./types"
 import { WidgetMenu } from "./WidgetMenu"
 
-export function LaunchTile({ widget }: { widget: LaunchTileWidget }) {
+export function LaunchTile({
+  widget,
+}: {
+  widget: LaunchTileWidget
+  size?: WidgetSize
+}) {
   const open = useContexts((s) => s.open)
   const Icon = widget.icon
   return (

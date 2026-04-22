@@ -56,7 +56,7 @@ export const storeManagerRecipe: Recipe = {
       kind: "analytics",
       title: "Revenue this week",
       icon: DollarSign,
-      size: "md",
+      size: "lg",
       metric: {
         value: "$8,420",
         delta: { value: "+12.4%", trend: "up" },
@@ -69,7 +69,7 @@ export const storeManagerRecipe: Recipe = {
       kind: "analytics",
       title: "Orders this week",
       icon: ShoppingBag,
-      size: "md",
+      size: "lg",
       metric: {
         value: "184",
         delta: { value: "+8", trend: "up" },
@@ -82,7 +82,7 @@ export const storeManagerRecipe: Recipe = {
       kind: "analytics",
       title: "Conversion rate",
       icon: TrendingUp,
-      size: "md",
+      size: "lg",
       metric: {
         value: "2.4%",
         delta: { value: "-0.2%", trend: "down" },
@@ -95,7 +95,7 @@ export const storeManagerRecipe: Recipe = {
       kind: "info",
       title: "Recent orders",
       icon: ShoppingBag,
-      size: "lg",
+      size: "xl",
       items: [
         { id: "o1", title: "#1284 — Sarah K.", meta: "$129.00 · 2m ago" },
         { id: "o2", title: "#1283 — Marco D.", meta: "$48.00 · 38m ago" },
@@ -108,7 +108,7 @@ export const storeManagerRecipe: Recipe = {
       kind: "info",
       title: "New reviews",
       icon: Star,
-      size: "lg",
+      size: "xl",
       items: [
         { id: "r1", title: "★★★★★ Linen tote", meta: "“Beautiful quality.”" },
         { id: "r2", title: "★★★★☆ Brass lamp", meta: "“Sturdier than I expected.”" },
@@ -118,7 +118,7 @@ export const storeManagerRecipe: Recipe = {
     {
       id: "nav-classic",
       kind: "nav",
-      size: "lg",
+      size: "tall",
       items: [
         {
           id: "n-pages",
