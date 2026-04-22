@@ -61,6 +61,15 @@ export const CONTEXT_META: Record<ContextType, Meta> = {
     icon: FileEdit,
     description: "Edit a page",
     keywords: ["page", "content", "edit"],
+    /**
+     * Dedupe by `id` so reopening Products / Users / Media / etc. focuses
+     * the existing tile instead of stacking duplicates. Without an `id`
+     * (e.g. a generic "Edit page" launch) we fall back to a single shared
+     * default — there's no meaningful way to tell two id-less edit-page
+     * contexts apart.
+     */
+    singletonKey: (params) =>
+      params?.id ? String(params.id) : "default",
   },
   settings: {
     defaultTitle: () => "Settings",
