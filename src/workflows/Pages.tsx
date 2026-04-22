@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ContextHeaderActions } from "@/shell/ContextHeaderActions"
+import { ContextHeader } from "@/shell/ContextHeader"
 import { ContextLayout } from "@/shell/ContextLayout"
 import { ContextSubnav } from "@/shell/ContextSubnav"
 import { useContexts } from "@/contexts/store"
@@ -193,22 +193,25 @@ export function Pages({ ctx }: { ctx: Context }) {
         </ContextSubnav.Group>
       </ContextSubnav>
       <ContextLayout.Main>
-        <header className="flex items-center justify-between gap-4 border-b px-6 py-4">
-          <div className="min-w-0">
-            <h1 className="font-heading text-lg font-semibold">Pages</h1>
-            <p className="text-xs text-muted-foreground">
-              {visible.length} {visible.length === 1 ? "page" : "pages"}
-              {view !== "all" ? ` in ${VIEWS.find((v) => v.key === view)?.label.toLowerCase()}` : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+        <ContextHeader
+          ctx={ctx}
+          actions={
             <Button size="sm" onClick={handleAddNew}>
               <FilePlus2 />
               Add new
             </Button>
-            <ContextHeaderActions ctx={ctx} />
-          </div>
-        </header>
+          }
+        >
+          <ContextHeader.Title
+            subtitle={`${visible.length} ${visible.length === 1 ? "page" : "pages"}${
+              view !== "all"
+                ? ` in ${VIEWS.find((v) => v.key === view)?.label.toLowerCase()}`
+                : ""
+            }`}
+          >
+            Pages
+          </ContextHeader.Title>
+        </ContextHeader>
 
         <div className="flex items-center gap-2 border-b px-6 py-3">
           <div className="relative max-w-sm flex-1">

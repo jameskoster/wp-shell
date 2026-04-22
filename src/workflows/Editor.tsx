@@ -1,20 +1,12 @@
 import { useMemo } from "react"
 import { Eye } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { parentForEditor, titleFor } from "@/contexts/registry"
 import { useContexts } from "@/contexts/store"
-import type { Context, ContextRef, EditorKind } from "@/contexts/types"
-import { ContextHeaderActions } from "@/shell/ContextHeaderActions"
+import type { Context, EditorKind } from "@/contexts/types"
+import { ContextHeader, type BreadcrumbCrumb } from "@/shell/ContextHeader"
 import { getPage, type PageRow } from "@/mocks/pages"
 
 type Doc = {
@@ -92,75 +84,56 @@ export function Editor({ ctx }: { ctx: Context }) {
   const doc = useMemo(() => resolveDoc(ctx), [ctx])
   const swapTo = useContexts((s) => s.swapTo)
   const parent = parentForEditor(doc.kind)
-
-  function handleParentClick(
-    ref: ContextRef,
-    event: React.MouseEvent<HTMLButtonElement>
-  ) {
-    // Walking back to the parent manage context is the other half of the
-    // edit loop. swapTo runs the choreographed two-tile swap when the
-    // parent is already open and falls back to a launch-rect open when
-    // it's not.
-    swapTo(ref, event.currentTarget.getBoundingClientRect())
-  }
+  // Walking back to the parent manage context is the other half of the
+  // edit loop. swapTo runs the choreographed two-tile swap when the
+  // parent is already open and falls back to a launch-rect open when
+  // it's not. This is editor-specific — most breadcrumbs (e.g. an
+  // order detail returning to Orders) navigate within a single context
+  // and don't touch swapTo at all.
+  const parentCrumb: BreadcrumbCrumb | null = parent
+    ? {
+        label: titleFor(parent),
+        onClick: (event) =>
+          swapTo(parent, event.currentTarget.getBoundingClientRect()),
+      }
+    : null
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <header className="flex items-center justify-between gap-4 border-b px-6 py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <Breadcrumb className="min-w-0">
-            <BreadcrumbList className="flex-nowrap text-base sm:text-base">
-              {parent ? (
-                <>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink
-                      render={
-                        <button
-                          type="button"
-                          onClick={(e) => handleParentClick(parent, e)}
-                          className="font-heading text-lg font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
-                        />
-                      }
-                    >
-                      {titleFor(parent)}
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="text-muted-foreground/60" />
-                </>
+      <ContextHeader
+        ctx={ctx}
+        actions={
+          <>
+            <Button size="sm" variant="ghost" disabled>
+              Save draft
+            </Button>
+            <Button size="sm" variant="outline" disabled>
+              <Eye />
+              Preview
+            </Button>
+            <Button size="sm" disabled>
+              {doc.status === "published" ? "Update" : "Publish"}
+            </Button>
+          </>
+        }
+      >
+        <ContextHeader.Breadcrumb
+          parents={parentCrumb}
+          current={doc.title}
+          badges={
+            <>
+              <Badge size="sm" variant={STATUS_VARIANT[doc.status]}>
+                {STATUS_LABEL[doc.status]}
+              </Badge>
+              {doc.isFrontPage ? (
+                <Badge size="sm" variant="outline">
+                  Front page
+                </Badge>
               ) : null}
-              <BreadcrumbItem className="min-w-0">
-                <BreadcrumbPage
-                  className="min-w-0 truncate font-heading text-lg font-semibold"
-                  title={doc.title}
-                >
-                  {doc.title}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <Badge size="sm" variant={STATUS_VARIANT[doc.status]}>
-            {STATUS_LABEL[doc.status]}
-          </Badge>
-          {doc.isFrontPage ? (
-            <Badge size="sm" variant="outline">
-              Front page
-            </Badge>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" disabled>
-            Save draft
-          </Button>
-          <Button size="sm" variant="outline" disabled>
-            <Eye />
-            Preview
-          </Button>
-          <Button size="sm" disabled>
-            {doc.status === "published" ? "Update" : "Publish"}
-          </Button>
-          <ContextHeaderActions ctx={ctx} />
-        </div>
-      </header>
+            </>
+          }
+        />
+      </ContextHeader>
 
       <ScrollArea className="flex-1 bg-[color-mix(in_srgb,var(--background),var(--color-black)_2%)] dark:bg-[color-mix(in_srgb,var(--background),var(--color-white)_2%)]">
         <Canvas doc={doc} />

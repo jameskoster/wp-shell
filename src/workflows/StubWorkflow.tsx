@@ -7,7 +7,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { ContextHeaderActions } from "@/shell/ContextHeaderActions"
+import { ContextHeader } from "@/shell/ContextHeader"
 import type { Context } from "@/contexts/types"
 import type { LucideIcon } from "lucide-react"
 
@@ -22,13 +22,9 @@ type Props = {
 export function StubWorkflow({ title, description, icon: Icon, hint, ctx }: Props) {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between gap-4 border-b px-8 py-5">
-        <div className="flex items-center gap-3">
-          <Icon className="size-5 text-muted-foreground" />
-          <h1 className="text-lg font-heading font-semibold">{title}</h1>
-        </div>
-        {ctx ? <ContextHeaderActions ctx={ctx} /> : null}
-      </header>
+      <ContextHeader ctx={ctx}>
+        <ContextHeader.Title icon={Icon}>{title}</ContextHeader.Title>
+      </ContextHeader>
       <Empty className="flex-1">
         <EmptyHeader>
           <EmptyMedia variant="icon">
