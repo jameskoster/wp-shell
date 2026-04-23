@@ -248,13 +248,20 @@ export function ContextTile({
   // in the final stretch as it lands on the launch tile. Without this the
   // dashboard shows through a half-transparent surface for the full 300ms,
   // which reads as ghostly rather than as a handoff.
+  //
+  // Easing flips from ease-glide (decelerate) on open to ease-glide-in
+  // (accelerate) on close. Reusing the decelerate curve in reverse made
+  // the contraction feel "clicky": the surface zipped away from full
+  // size and then crawled onto the dock icon. With ease-in the surface
+  // lingers briefly at full size and then falls into the dock — open
+  // and close now mirror each other as arriving / departing motion.
   const surfaceTransitionStyle =
     isHoming && !homeDoneSnap
       ? {
           transitionProperty: "transform, width, height, opacity, border-radius",
           transitionDuration: "300ms, 300ms, 300ms, 180ms, 300ms",
           transitionDelay: "0ms, 0ms, 0ms, 120ms, 0ms",
-          transitionTimingFunction: "var(--ease-glide)",
+          transitionTimingFunction: "var(--ease-glide-in)",
         }
       : null
 
