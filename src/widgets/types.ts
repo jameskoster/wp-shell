@@ -74,3 +74,40 @@ export type Recipe = {
   greeting: string
   widgets: WidgetDef[]
 }
+
+/**
+ * A pinned item lives on exactly one surface at a time. Both the
+ * dashboard's launch tiles and the dock render `PinnedItem`s; mutual
+ * exclusivity is enforced by `setPlacement`, which always removes the
+ * item from whichever list currently holds it before appending to its
+ * destination.
+ */
+export type PinnedItem = {
+  id: string
+  action: ContextRef
+  title: string
+  icon: LucideIcon
+  description?: string
+  badge?: string
+}
+
+/**
+ * Ordered entry in the dashboard grid. A slot is either:
+ *
+ *  - `pinned`  — a launch tile pinned by the user (or seeded from a nav
+ *    item with `defaultPlacement: "dashboard"`). The full PinnedItem is
+ *    inlined so the slot is self-contained — no foreign-key drift if
+ *    the pin's source data changes shape.
+ *  - `recipe` — references a recipe widget by id (info, analytics, …).
+ *    `sizeOverride` is reserved for a future per-widget resize gesture
+ *    inside Customize mode and is not consumed yet.
+ *
+ * The `dashboardOrder` array on the placement store is the single source
+ * of truth for both ordering AND inclusion: a recipe widget that's been
+ * dismissed via the per-widget menu is absent from the array (and its id
+ * is mirrored into `hiddenWidgetIds` so the Add widgets menu can offer
+ * it back).
+ */
+export type DashboardSlot =
+  | { kind: "pinned"; pinned: PinnedItem }
+  | { kind: "recipe"; widgetId: string; sizeOverride?: WidgetSize }

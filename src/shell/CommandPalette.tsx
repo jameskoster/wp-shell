@@ -1,5 +1,5 @@
 import { Fragment } from "react"
-import { Home as HomeIcon } from "lucide-react"
+import { Home as HomeIcon, SlidersHorizontal } from "lucide-react"
 import {
   Command,
   CommandCollection,
@@ -17,7 +17,9 @@ import {
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Badge } from "@/components/ui/badge"
 import { useUI } from "./uiStore"
-import { useClosedRecents, useContexts } from "@/contexts/store"
+import { useCustomize } from "./customizeStore"
+import { goHomeFromActive } from "./goHomeFromActive"
+import { useActiveContext, useClosedRecents, useContexts } from "@/contexts/store"
 import { DESTINATIONS, metaFor } from "@/contexts/registry"
 import type { ContextRef, Destination } from "@/contexts/types"
 import { shortcutLabel } from "./useShortcuts"
@@ -26,6 +28,7 @@ type Row =
   | { kind: "home" }
   | { kind: "destination"; data: Destination }
   | { kind: "recent"; data: { ref: ContextRef; title: string } }
+  | { kind: "action"; data: { id: string; title: string; onSelect: () => void } }
 
 type Group = {
   value: string
@@ -39,8 +42,38 @@ export function CommandPalette() {
   const openContext = useContexts((s) => s.open)
   const goHome = useContexts((s) => s.goHome)
   const recents = useClosedRecents()
+  const setCustomizing = useCustomize((s) => s.setActive)
+  const customizing = useCustomize((s) => s.active)
+  const activeContext = useActiveContext()
+  const dashboardActive = activeContext === null
 
   const groups: Group[] = []
+
+  // Customize is always offered (except when already customizing). When
+  // invoked from inside a context, the action implicitly closes that
+  // context first — invoking "Customize Dashboard" from a context is a
+  // statement of intent that we shouldn't make the user satisfy by
+  // navigating home themselves.
+  if (!customizing) {
+    groups.push({
+      value: "actions",
+      label: "Actions",
+      items: [
+        {
+          kind: "action" as const,
+          data: {
+            id: "customize-dashboard",
+            title: "Customize Dashboard",
+            onSelect: () => {
+              if (!dashboardActive) goHomeFromActive(activeContext)
+              setCustomizing(true)
+              close()
+            },
+          },
+        },
+      ],
+    })
+  }
 
   if (recents.length > 0) {
     groups.push({
@@ -129,6 +162,18 @@ export function CommandPalette() {
                                 {d.description}
                               </span>
                             ) : null}
+                          </CommandItem>
+                        )
+                      }
+                      if (row.kind === "action") {
+                        return (
+                          <CommandItem
+                            key={row.data.id}
+                            value={row.data.title}
+                            onClick={() => row.data.onSelect()}
+                          >
+                            <SlidersHorizontal className="size-4 text-muted-foreground" />
+                            <span>{row.data.title}</span>
                           </CommandItem>
                         )
                       }

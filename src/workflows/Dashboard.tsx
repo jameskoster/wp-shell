@@ -1,35 +1,53 @@
 import { useMemo } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { WidgetGrid } from "@/widgets/WidgetGrid"
 import { adminRecipe } from "@/recipes/admin"
 import { usePlacement } from "@/stores/placementStore"
-import type { LaunchTileWidget, WidgetDef } from "@/widgets/types"
+import { WidgetGrid } from "@/widgets/WidgetGrid"
+import type {
+  DashboardSlot,
+  LaunchTileWidget,
+  WidgetDef,
+} from "@/widgets/types"
+
+/**
+ * Resolve a `dashboardOrder` slot to a concrete `WidgetDef` for the
+ * grid renderer. Pinned slots inline their PinnedItem; recipe slots
+ * look up the matching widget definition (and apply any
+ * `sizeOverride`, reserved for the future per-widget resize gesture).
+ */
+function slotToWidget(slot: DashboardSlot): WidgetDef | null {
+  if (slot.kind === "pinned") {
+    const tile: LaunchTileWidget = {
+      id: slot.pinned.id,
+      kind: "launch",
+      title: slot.pinned.title,
+      description: slot.pinned.description,
+      icon: slot.pinned.icon,
+      size: "sm",
+      action: slot.pinned.action,
+      badge: slot.pinned.badge,
+    }
+    return tile
+  }
+  const recipe = adminRecipe.widgets.find((w) => w.id === slot.widgetId)
+  if (!recipe) return null
+  if (recipe.kind === "nav" || recipe.kind === "launch") return null
+  if (slot.sizeOverride) {
+    return { ...recipe, size: slot.sizeOverride }
+  }
+  return recipe
+}
 
 export function Dashboard() {
-  const recipe = adminRecipe
-  const tiles = usePlacement((s) => s.dashboard)
-  const hiddenWidgetIds = usePlacement((s) => s.hiddenWidgetIds)
-  const isHidden = (id: string) => hiddenWidgetIds.includes(id)
-  const tileWidgets: LaunchTileWidget[] = useMemo(
+  const order = usePlacement((s) => s.dashboardOrder)
+  const widgets = useMemo<WidgetDef[]>(
     () =>
-      tiles.map((t) => ({
-        id: t.id,
-        kind: "launch",
-        title: t.title,
-        description: t.description,
-        icon: t.icon,
-        size: "sm",
-        action: t.action,
-        badge: t.badge,
-      })),
-    [tiles]
+      order
+        .map(slotToWidget)
+        .filter((w): w is WidgetDef => w !== null),
+    [order],
   )
-  // Nav widgets are now rendered by the shell-level <Dock />, so they're
-  // filtered out here to avoid double-rendering inside the grid.
-  const recipeWidgets = recipe.widgets.filter(
-    (w) => w.kind !== "launch" && w.kind !== "nav" && !isHidden(w.id)
-  )
-  const widgets: WidgetDef[] = [...tileWidgets, ...recipeWidgets]
+
   return (
     <ScrollArea className="flex-1">
       <div

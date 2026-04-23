@@ -43,6 +43,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useCustomize } from "./customizeStore"
+import { goHomeFromActive } from "./goHomeFromActive"
 import { useDock, type DockPosition } from "./dockStore"
 import { useUI } from "./uiStore"
 import {
@@ -51,7 +53,6 @@ import {
   useContexts,
   useOpenContexts,
 } from "@/contexts/store"
-import { refKey } from "@/contexts/url"
 import { NOTIFICATIONS } from "@/mocks/notifications"
 import { USER } from "@/mocks/user"
 import { OTHER_SITES, SITE } from "@/mocks/site"
@@ -60,7 +61,6 @@ import { shortcutLabel } from "./useShortcuts"
 export function AdminBar() {
   const toggle = useUI((s) => s.toggle)
   const openContext = useContexts((s) => s.open)
-  const goHome = useContexts((s) => s.goHome)
   const closedRecents = useClosedRecents()
   const openCount = useOpenContexts().length
   const active = useActiveContext()
@@ -68,36 +68,10 @@ export function AdminBar() {
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length
   const dockPosition = useDock((s) => s.position)
   const setDockPosition = useDock((s) => s.setPosition)
+  const customizing = useCustomize((s) => s.active)
+  const setCustomizing = useCustomize((s) => s.setActive)
 
-  /**
-   * If the active context maps to a dashboard launch tile, resolve its
-   * rect so the surface can play the reverse-launch animation back into
-   * the tile. Falls back to no rect (instant home) for contexts with no
-   * launch tile, or when the dashboard isn't currently in the DOM at the
-   * size we expect.
-   */
-  const handleGoHome = () => {
-    if (!active) {
-      goHome()
-      return
-    }
-    const key = refKey({ type: active.type, params: active.params })
-    // Both surfaces tag their button with `data-launch-key`, so a single
-    // query covers home for the active context. Mutual exclusivity in
-    // `usePlacement` guarantees at most one match.
-    const el =
-      typeof document !== "undefined"
-        ? document.querySelector<HTMLElement>(`[data-launch-key="${key}"]`)
-        : null
-    // The dock now scrolls horizontally / vertically, so the target item
-    // may be inside its scroll viewport and currently scrolled off-edge.
-    // Pull it into view first so the rect we hand to `goHome` is the
-    // pose the user will actually see as the surface contracts.
-    // `block`/`inline` "nearest" no-op if the element is already visible.
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" })
-    const rect = el?.getBoundingClientRect()
-    goHome(rect && rect.width > 0 && rect.height > 0 ? rect : null)
-  }
+  const handleGoHome = () => goHomeFromActive(active)
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-1 border-b bg-card px-2">
@@ -270,6 +244,27 @@ export function AdminBar() {
             }
           >
             Site settings
+          </MenuItem>
+          <MenuItem
+            // Customize implies "take me to the dashboard's editing
+            // posture", so invoking it from inside any context first
+            // closes that context (revealing the Dashboard) and then
+            // enters Customize mode. React batches the two updates so
+            // the auto-exit effect in Shell.tsx sees both `active=null`
+            // and `customizing=true` in the same render, and doesn't
+            // flip customize back off.
+            //
+            // We use `goHomeFromActive` rather than the bare `goHome`
+            // so the close-context choreography animates back to the
+            // originating launch tile / dock item, matching what the
+            // home button does.
+            disabled={customizing}
+            onClick={() => {
+              if (!dashboardActive) goHomeFromActive(active)
+              setCustomizing(true)
+            }}
+          >
+            Customize Dashboard
           </MenuItem>
           <MenuSub>
             <MenuSubTrigger>Dock position</MenuSubTrigger>

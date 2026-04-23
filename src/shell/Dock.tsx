@@ -1,4 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react"
+import { useDroppable } from "@dnd-kit/core"
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { Badge } from "@/components/ui/badge"
 import {
   ContextMenu,
@@ -14,15 +22,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  launchKey,
   resolveDefaultParams,
   singletonKeyFor,
 } from "@/contexts/registry"
 import { useContexts } from "@/contexts/store"
 import type { ContextRef } from "@/contexts/types"
-import { refKey } from "@/contexts/url"
 import { useIsMobile } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { usePlacement, type PinnedItem } from "@/stores/placementStore"
+import {
+  DOCK_ZONE_ID,
+  dockItemId,
+  useActiveDrag,
+} from "./CustomizeDnd"
+import { useCustomize } from "./customizeStore"
 import { useDock, type DockPosition } from "./dockStore"
 import { useUI } from "./uiStore"
 
@@ -125,7 +139,7 @@ function renderDockButton(
   return (
     <button
       type="button"
-      data-launch-key={refKey(item.action)}
+      data-launch-key={launchKey(item.action)}
       onClick={(e) => onActivate(e.currentTarget.getBoundingClientRect())}
       aria-label={item.title}
       className="relative flex size-9 shrink-0 items-center justify-center rounded-lg outline-none transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
@@ -186,10 +200,63 @@ function DockItemContextMenu({
   )
 }
 
+/**
+ * Customize-mode wrapper around a single dock item. Mirrors the
+ * dashboard's `SortableWidget`: the wrapper is the drag activator, the
+ * inner button is `inert` so its click + focus are suppressed during
+ * editing, and the wrapper jiggles to advertise the affordance.
+ */
+function SortableDockItem({
+  item,
+  isOpen,
+  position,
+  index,
+}: {
+  item: PinnedItem
+  isOpen: boolean
+  position: DockPosition
+  index: number
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: dockItemId(item.id) })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "rounded-lg outline-none cursor-grab focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+        index % 2 === 0
+          ? "motion-safe:animate-jiggle"
+          : "motion-safe:animate-jiggle-alt",
+        isDragging && "z-10 cursor-grabbing opacity-50",
+      )}
+      aria-label={`Reposition ${item.title}`}
+      {...attributes}
+      {...listeners}
+    >
+      <div inert>
+        {renderDockButton(item, isOpen, position, () => {})}
+      </div>
+    </div>
+  )
+}
+
 export function Dock() {
   const stored = useDock((s) => s.position)
   const isMobile = useIsMobile()
   const switcherOpen = useUI((s) => s.overlay === "switcher")
+  const customizing = useCustomize((s) => s.active)
   const open = useContexts((s) => s.open)
   const openContexts = useContexts((s) => s.openContexts)
 
@@ -271,84 +338,193 @@ export function Dock() {
 
   if (position === "hidden") return null
   // Avoid rendering an empty pill if the user has moved every item to the
-  // dashboard. The dock reappears as soon as anything is pinned to it.
-  if (items.length === 0) return null
+  // dashboard. The dock reappears as soon as anything is pinned to it —
+  // OR if customize mode is active, so the user has a drop target for
+  // launch tiles being dragged off the dashboard.
+  if (items.length === 0 && !customizing) return null
 
   const tooltipSide = tooltipSideFor(position)
 
+  // Two distinct dim treatments:
+  //   - Switcher open      → fully inert (we're not on the dashboard
+  //                          surface; the dock has no role).
+  //   - Customize active   → visually attenuated but kept interactive
+  //                          so it can receive drops. Items are
+  //                          rendered through SortableDockItem which
+  //                          inerts the inner button.
+  const inertDim = switcherOpen
   return (
     <div
       className={cn(
         "fixed z-30 motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide",
-        switcherOpen
+        inertDim
           ? "pointer-events-none opacity-40 blur-sm"
-          : "opacity-100 blur-0",
+          : customizing
+            ? "opacity-100"
+            : "opacity-100 blur-0",
         containerPositionClasses(position),
       )}
-      aria-hidden={switcherOpen}
-      inert={switcherOpen}
+      aria-hidden={inertDim}
+      inert={inertDim}
     >
-      <div
-        ref={containerRef}
-        role="toolbar"
-        aria-label="Dock"
-        aria-orientation={orientation}
-        className={cn(
-          "flex rounded-2xl border bg-card/80 p-1.5 shadow-lg/10 backdrop-blur",
-          // The pill shrink-wraps the inner ScrollArea up to a viewport-
-          // bounded cap. Once the natural item track exceeds the cap the
-          // pill stops growing and the ScrollArea takes over with
-          // scrolling + edge fades.
-          orientation === "horizontal"
-            ? "max-w-[calc(100vw-1.5rem)]"
-            : "max-h-[calc(100svh-6rem)]",
-          // Honor iOS safe area at the bottom on mobile devices with a
-          // chin/notch.
-          orientation === "horizontal" &&
-            "pb-[max(0.375rem,env(safe-area-inset-bottom))]",
-        )}
-      >
-        <ScrollArea
-          // Hide the scrollbar entirely — the edge fades are the only
-          // affordance, matching the macOS Dock metaphor of an
-          // uncluttered surface that just scrolls.
-          className="**:data-[slot=scroll-area-scrollbar]:hidden"
-          scrollFade
-        >
-          <TooltipProvider delay={0} closeDelay={0}>
-            <div
-              className={cn(
-                "flex gap-1",
-                // `w-max` / `h-max` lets the inner track grow to its
-                // natural size beyond the constrained viewport so
-                // overflow actually engages the scroll axis.
-                orientation === "horizontal"
-                  ? "w-max flex-row items-center"
-                  : "h-max flex-col items-center",
-              )}
-            >
-              {items.map((item) => {
-                const key = openKeyFor(item.action)
-                const isOpen = key ? openKeys.has(key) : false
-                return (
-                  <DockItemContextMenu key={item.id} item={item}>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={renderDockButton(item, isOpen, position, (rect) =>
-                          open(item.action, rect),
-                        )}
-                      />
-                      <TooltipPopup side={tooltipSide} sideOffset={8}>
-                        {item.title}
-                      </TooltipPopup>
-                    </Tooltip>
-                  </DockItemContextMenu>
-                )
-              })}
-            </div>
-          </TooltipProvider>
-        </ScrollArea>
-      </div>
+      <CustomizeAwareContainer
+        containerRef={containerRef}
+        orientation={orientation}
+        position={position}
+        tooltipSide={tooltipSide}
+        items={items}
+        openKeys={openKeys}
+        customizing={customizing}
+        onActivate={open}
+      />
     </div>
+  )
+}
+
+/**
+ * Inner container is split out so the customize-mode SortableContext
+ * + droppable wiring can live in one place without polluting the live
+ * dock render path.
+ */
+function CustomizeAwareContainer({
+  containerRef,
+  orientation,
+  position,
+  tooltipSide,
+  items,
+  openKeys,
+  customizing,
+  onActivate,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>
+  orientation: Orientation
+  position: DockPosition
+  tooltipSide: ReturnType<typeof tooltipSideFor>
+  items: PinnedItem[]
+  openKeys: Set<string>
+  customizing: boolean
+  onActivate: (
+    ref: ContextRef,
+    rect: DOMRect,
+  ) => string
+}) {
+  const drag = useActiveDrag()
+  // The dock only accepts launch tiles. Disable the droppable for any
+  // other drag source so the cursor reads "not allowed" and the drop
+  // routes to a no-op rather than something nonsensical.
+  const dropEnabled = customizing && (drag === null || drag.isLaunchTile)
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: DOCK_ZONE_ID,
+    disabled: !dropEnabled,
+  })
+
+  const dockHasNonLaunchOver =
+    customizing && drag !== null && !drag.isLaunchTile && isOver
+
+  const itemTrack = (
+    <div
+      className={cn(
+        "flex gap-1",
+        orientation === "horizontal"
+          ? "w-max flex-row items-center"
+          : "h-max flex-col items-center",
+      )}
+    >
+      {items.map((item, i) => {
+        const key = openKeyFor(item.action)
+        const isOpen = key ? openKeys.has(key) : false
+        if (customizing) {
+          return (
+            <SortableDockItem
+              key={item.id}
+              item={item}
+              isOpen={isOpen}
+              position={position}
+              index={i}
+            />
+          )
+        }
+        return (
+          <DockItemContextMenu key={item.id} item={item}>
+            <Tooltip>
+              <TooltipTrigger
+                render={renderDockButton(item, isOpen, position, (rect) =>
+                  onActivate(item.action, rect),
+                )}
+              />
+              <TooltipPopup side={tooltipSide} sideOffset={8}>
+                {item.title}
+              </TooltipPopup>
+            </Tooltip>
+          </DockItemContextMenu>
+        )
+      })}
+      {/* Empty-state hint while customizing so the dock visibly
+          remains a drop target after the user has moved everything off
+          it. Non-launch drags get a "not allowed" treatment via the
+          opacity / cursor styles on the outer container. */}
+      {customizing && items.length === 0 ? (
+        <div className="flex h-9 items-center justify-center px-3 text-xs text-muted-foreground whitespace-nowrap">
+          Drop a launch tile here
+        </div>
+      ) : null}
+    </div>
+  )
+
+  // Build the inner pill. Pinned containerRef is preserved so the
+  // existing inset-publishing useLayoutEffect keeps working.
+  const pill = (
+    <div
+      ref={(node) => {
+        containerRef.current = node
+        setDropRef(node)
+      }}
+      role="toolbar"
+      aria-label="Dock"
+      aria-orientation={orientation}
+      className={cn(
+        "flex rounded-2xl border bg-card/80 p-1.5 shadow-lg/10 backdrop-blur",
+        orientation === "horizontal"
+          ? "max-w-[calc(100vw-1.5rem)]"
+          : "max-h-[calc(100svh-6rem)]",
+        orientation === "horizontal" &&
+          "pb-[max(0.375rem,env(safe-area-inset-bottom))]",
+        // Drop-target affordances during a drag.
+        customizing &&
+          drag &&
+          drag.isLaunchTile &&
+          isOver &&
+          "ring-2 ring-ring ring-offset-2 ring-offset-background bg-card",
+        dockHasNonLaunchOver &&
+          "ring-2 ring-destructive/60 ring-offset-2 ring-offset-background cursor-not-allowed",
+      )}
+    >
+      <ScrollArea
+        className="**:data-[slot=scroll-area-scrollbar]:hidden"
+        scrollFade
+      >
+        {customizing ? (
+          itemTrack
+        ) : (
+          <TooltipProvider delay={0} closeDelay={0}>
+            {itemTrack}
+          </TooltipProvider>
+        )}
+      </ScrollArea>
+    </div>
+  )
+
+  if (!customizing) return pill
+  return (
+    <SortableContext
+      items={items.map((i) => dockItemId(i.id))}
+      strategy={
+        orientation === "horizontal"
+          ? horizontalListSortingStrategy
+          : verticalListSortingStrategy
+      }
+    >
+      {pill}
+    </SortableContext>
   )
 }

@@ -199,6 +199,29 @@ export function resolveDefaultParams(
 }
 
 /**
+ * Compute the `data-launch-key` for an originating UI element (a launch
+ * tile, a dock item, …). This key needs to match the `refKey` of the
+ * context that the click will eventually open, so that
+ * `goHomeFromActive` can reverse-animate the surface back into the
+ * element it sprang from.
+ *
+ * The non-trivial bit: `useContexts.open` applies `resolveDefaultParams`
+ * for parameterless refs (e.g. the bare `editor` action used by the
+ * Appearance launch tile resolves to `{ kind: "page", id: "home" }`).
+ * If we naively used `refKey(action)` here, the tile would be tagged
+ * `editor` while the active context's `refKey` would be
+ * `editor?id=home&kind=page` — and the lookup would miss. Mirroring the
+ * defaulting at tag time keeps the two in lockstep.
+ */
+export function launchKey(ref: ContextRef): string {
+  const hasParams =
+    ref.params !== undefined && Object.keys(ref.params).length > 0
+  if (hasParams) return refKey(ref)
+  const defaults = resolveDefaultParams(ref.type)
+  return refKey(defaults ? { type: ref.type, params: defaults } : ref)
+}
+
+/**
  * Maps an editor `kind` to the manage context it belongs to. The Editor
  * uses this to render a breadcrumb back to its parent dataview, regardless
  * of how the user actually arrived at the Editor (manage row click, deep
