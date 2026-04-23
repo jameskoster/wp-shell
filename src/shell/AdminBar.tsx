@@ -82,10 +82,19 @@ export function AdminBar() {
       return
     }
     const key = refKey({ type: active.type, params: active.params })
+    // Both surfaces tag their button with `data-launch-key`, so a single
+    // query covers home for the active context. Mutual exclusivity in
+    // `usePlacement` guarantees at most one match.
     const el =
       typeof document !== "undefined"
         ? document.querySelector<HTMLElement>(`[data-launch-key="${key}"]`)
         : null
+    // The dock now scrolls horizontally / vertically, so the target item
+    // may be inside its scroll viewport and currently scrolled off-edge.
+    // Pull it into view first so the rect we hand to `goHome` is the
+    // pose the user will actually see as the surface contracts.
+    // `block`/`inline` "nearest" no-op if the element is already visible.
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" })
     const rect = el?.getBoundingClientRect()
     goHome(rect && rect.width > 0 && rect.height > 0 ? rect : null)
   }

@@ -117,6 +117,7 @@ export const adminRecipe: Recipe = {
           title: "Pages",
           icon: FileText,
           action: { type: "pages" },
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-media",
@@ -140,6 +141,7 @@ export const adminRecipe: Recipe = {
             params: { id: "products" },
             title: "Products",
           },
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-orders",
@@ -147,6 +149,7 @@ export const adminRecipe: Recipe = {
           icon: ShoppingBag,
           action: { type: "orders" },
           badge: "12",
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-product-reviews",
@@ -160,12 +163,14 @@ export const adminRecipe: Recipe = {
           title: "Marketing",
           icon: Megaphone,
           action: { type: "marketing" },
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-analytics",
           title: "Analytics",
           icon: BarChart3,
           action: { type: "analytics" },
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-users",

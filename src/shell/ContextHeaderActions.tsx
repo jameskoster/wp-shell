@@ -2,15 +2,16 @@ import { MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Menu,
-  MenuCheckboxItem,
   MenuItem,
   MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu"
 import { iconFor } from "@/contexts/registry"
 import type { Context, ContextRef } from "@/contexts/types"
-import { useDashboard } from "@/stores/dashboardStore"
+import { usePlacement, type Placement } from "@/stores/placementStore"
 
 export function ContextHeaderActions({ ctx }: { ctx: Context }) {
   const action: ContextRef = {
@@ -18,12 +19,11 @@ export function ContextHeaderActions({ ctx }: { ctx: Context }) {
     params: ctx.params,
     title: ctx.title,
   }
-  // Subscribe to a derived boolean so the checkbox re-renders when the
-  // tile is added or removed. Selecting `hasTile` directly returns the
-  // same function reference every time and would skip the update.
-  const exists = useDashboard((s) => s.hasTile(action))
-  const addTile = useDashboard((s) => s.addTile)
-  const removeTile = useDashboard((s) => s.removeTile)
+  // Subscribe to a derived value so the radio re-renders when the
+  // placement changes. Selecting `placementOf` directly returns the same
+  // function reference every time and would skip the update.
+  const placement = usePlacement((s) => s.placementOf(action))
+  const setPlacement = usePlacement((s) => s.setPlacement)
   const icon = ctx.icon ?? iconFor(action)
   return (
     <Menu>
@@ -39,15 +39,19 @@ export function ContextHeaderActions({ ctx }: { ctx: Context }) {
         }
       />
       <MenuPopup align="end">
-        <MenuCheckboxItem
-          checked={exists}
-          onCheckedChange={(next) => {
-            if (next) addTile({ action, title: ctx.title, icon })
-            else removeTile(action)
-          }}
+        <MenuRadioGroup
+          value={placement}
+          onValueChange={(next) =>
+            setPlacement(action, next as Placement, {
+              title: ctx.title,
+              icon,
+            })
+          }
         >
-          Show on dashboard
-        </MenuCheckboxItem>
+          <MenuRadioItem value="dashboard">Show on dashboard</MenuRadioItem>
+          <MenuRadioItem value="dock">Show in dock</MenuRadioItem>
+          <MenuRadioItem value="none">Don't show</MenuRadioItem>
+        </MenuRadioGroup>
         <MenuSeparator />
         <MenuItem disabled>Help</MenuItem>
       </MenuPopup>

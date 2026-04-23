@@ -2,13 +2,13 @@ import { useMemo } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { WidgetGrid } from "@/widgets/WidgetGrid"
 import { adminRecipe } from "@/recipes/admin"
-import { useDashboard } from "@/stores/dashboardStore"
+import { usePlacement } from "@/stores/placementStore"
 import type { LaunchTileWidget, WidgetDef } from "@/widgets/types"
 
 export function Dashboard() {
   const recipe = adminRecipe
-  const tiles = useDashboard((s) => s.tiles)
-  const hiddenWidgetIds = useDashboard((s) => s.hiddenWidgetIds)
+  const tiles = usePlacement((s) => s.dashboard)
+  const hiddenWidgetIds = usePlacement((s) => s.hiddenWidgetIds)
   const isHidden = (id: string) => hiddenWidgetIds.includes(id)
   const tileWidgets: LaunchTileWidget[] = useMemo(
     () =>

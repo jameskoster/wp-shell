@@ -3,34 +3,36 @@ import {
   Menu,
   MenuItem,
   MenuPopup,
+  MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu"
+import type { ContextRef } from "@/contexts/types"
 import { usePlacement } from "@/stores/placementStore"
 import { cn } from "@/lib/utils"
 
-type WidgetMenuProps = {
-  widgetId: string
+type LaunchTileMenuProps = {
+  action: ContextRef
   className?: string
   /**
    * When true, the trigger stays visible at full opacity. By default the
-   * trigger fades in on hover / focus to keep widgets visually quiet.
+   * trigger fades in on hover / focus to keep tiles visually quiet.
    */
   alwaysVisible?: boolean
 }
 
-export function WidgetMenu({
-  widgetId,
+export function LaunchTileMenu({
+  action,
   className,
   alwaysVisible = false,
-}: WidgetMenuProps) {
-  const removeWidget = usePlacement((s) => s.removeWidget)
+}: LaunchTileMenuProps) {
+  const setPlacement = usePlacement((s) => s.setPlacement)
   return (
     <Menu>
       <MenuTrigger
         render={
           <button
             type="button"
-            aria-label="Widget options"
+            aria-label="Tile options"
             className={cn(
               "inline-flex size-6 items-center justify-center rounded-md text-muted-foreground outline-none transition-[opacity,background-color] hover:bg-accent/60 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-[popup-open]:opacity-100 data-[popup-open]:bg-accent/60",
               alwaysVisible
@@ -45,9 +47,13 @@ export function WidgetMenu({
         }
       />
       <MenuPopup align="end" className="min-w-40">
+        <MenuItem onClick={() => setPlacement(action, "dock")}>
+          Move to dock
+        </MenuItem>
+        <MenuSeparator />
         <MenuItem
           variant="destructive"
-          onClick={() => removeWidget(widgetId)}
+          onClick={() => setPlacement(action, "none")}
         >
           Remove
         </MenuItem>

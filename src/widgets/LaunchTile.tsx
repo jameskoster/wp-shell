@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
 import { refKey } from "@/contexts/url"
 import type { LaunchTileWidget, WidgetSize } from "./types"
-import { WidgetMenu } from "./WidgetMenu"
+import { LaunchTileMenu } from "./LaunchTileMenu"
 
 export function LaunchTile({
   widget,
@@ -47,8 +47,8 @@ export function LaunchTile({
           ) : null}
         </div>
       </Card>
-      <WidgetMenu
-        widgetId={widget.id}
+      <LaunchTileMenu
+        action={widget.action}
         className="absolute top-3 right-3 z-10"
       />
     </div>

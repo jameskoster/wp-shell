@@ -50,6 +50,10 @@ export type NavItem = {
   icon?: LucideIcon
   action: ContextRef
   badge?: string
+  // When seeding the placement store, items default to the dock unless
+  // tagged otherwise. Items the recipe wants front-and-center on first
+  // load should set `"dashboard"`.
+  defaultPlacement?: "dock" | "dashboard"
 }
 
 export type NavWidget = Omit<WidgetBase, "title"> & {

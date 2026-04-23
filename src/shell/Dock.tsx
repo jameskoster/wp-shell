@@ -1,42 +1,32 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react"
-import { MoreHorizontal } from "lucide-react"
+import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverPopup, PopoverTrigger } from "@/components/ui/popover"
+import {
+  ContextMenu,
+  ContextMenuPopup,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import { MenuItem, MenuSeparator } from "@/components/ui/menu"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Tooltip,
   TooltipPopup,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  resolveDefaultParams,
+  singletonKeyFor,
+} from "@/contexts/registry"
 import { useContexts } from "@/contexts/store"
-import { useIsMobile, useMediaQuery } from "@/hooks/use-media-query"
-import { adminRecipe } from "@/recipes/admin"
+import type { ContextRef } from "@/contexts/types"
+import { refKey } from "@/contexts/url"
+import { useIsMobile } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
-import type { NavItem, NavWidget } from "@/widgets/types"
+import { usePlacement, type PinnedItem } from "@/stores/placementStore"
 import { useDock, type DockPosition } from "./dockStore"
 import { useUI } from "./uiStore"
 
 type Orientation = "horizontal" | "vertical"
-
-// Vertical dock is centered on viewport height, which varies less than
-// width across devices. A flat cap keeps the dock from dominating short
-// viewports while still surfacing enough items to be useful.
-const MAX_VISIBLE_VERTICAL = 8
-
-// Horizontal cap scales with viewport width. Mobile is intentionally
-// tight so the dock fits comfortably on ~375px screens. Anything past
-// the active cap collapses into the trailing "More" popover.
-function useHorizontalCap(): number {
-  const isMobile = useIsMobile()
-  const is2xl = useMediaQuery("2xl")
-  const isXl = useMediaQuery("xl")
-  const isLg = useMediaQuery("lg")
-  if (isMobile) return 6
-  if (is2xl) return 14
-  if (isXl) return 12
-  if (isLg) return 10
-  return 8
-}
 
 function effectivePosition(
   stored: DockPosition,
@@ -62,10 +52,6 @@ function tooltipSideFor(position: DockPosition) {
   }
 }
 
-function popoverSideFor(position: DockPosition) {
-  return tooltipSideFor(position)
-}
-
 function containerPositionClasses(position: DockPosition): string {
   switch (position) {
     case "left-center":
@@ -78,47 +64,88 @@ function containerPositionClasses(position: DockPosition): string {
   }
 }
 
-function getNavItems(): NavItem[] {
-  return adminRecipe.widgets
-    .filter((w): w is NavWidget => w.kind === "nav")
-    .flatMap((w) => w.items)
+/**
+ * Position the "open context" indicator dot at the inward edge of the
+ * dock — below the icon when the dock sits along the bottom, and on the
+ * screen-facing side when it's vertical. Mirrors the macOS Dock metaphor
+ * of a dot under a running app.
+ */
+function indicatorClassesFor(position: DockPosition): string {
+  switch (position) {
+    case "left-center":
+      return "right-0.5 top-1/2 -translate-y-1/2"
+    case "right-center":
+      return "left-0.5 top-1/2 -translate-y-1/2"
+    case "bottom-center":
+    default:
+      return "bottom-0.5 left-1/2 -translate-x-1/2"
+  }
+}
+
+/**
+ * Position the notification badge so its bleed only extends along the
+ * dock's main scroll axis. A cross-axis overhang (e.g. `-right-1` on a
+ * vertical dock) inflates the ScrollArea's horizontal scroll extent and
+ * lights up the edge-fade mask on the pill's inner edge.
+ */
+function badgeClassesFor(position: DockPosition): string {
+  switch (position) {
+    case "left-center":
+    case "right-center":
+      return "-top-1 right-0"
+    case "bottom-center":
+    default:
+      return "-top-1 -right-1"
+  }
+}
+
+/**
+ * Build the "is this ref currently open?" key. Mirrors the dedupe logic
+ * in `useContexts.open`: defaults are applied to bare refs, then the
+ * type's singleton key (if any) identifies the canonical instance. Refs
+ * for non-singleton types can never reliably correspond to a static
+ * dock entry, so we return `null` and skip them.
+ */
+function openKeyFor(ref: ContextRef): string | null {
+  const hasParams =
+    ref.params !== undefined && Object.keys(ref.params).length > 0
+  const params = hasParams ? ref.params : resolveDefaultParams(ref.type) ?? ref.params
+  const key = singletonKeyFor(ref.type, params)
+  if (key === undefined) return null
+  return `${ref.type}:${key}`
 }
 
 function renderDockButton(
-  item: NavItem,
+  item: PinnedItem,
+  isOpen: boolean,
+  position: DockPosition,
   onActivate: (rect: DOMRect) => void,
-  iconOnly = true,
 ) {
   const Icon = item.icon
   return (
     <button
       type="button"
+      data-launch-key={refKey(item.action)}
       onClick={(e) => onActivate(e.currentTarget.getBoundingClientRect())}
-      aria-label={iconOnly ? item.title : undefined}
-      className={cn(
-        "outline-none transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-        iconOnly
-          ? "relative flex size-9 items-center justify-center rounded-lg"
-          : "flex w-full items-center gap-2 rounded-md px-2 py-2 text-start",
-      )}
+      aria-label={item.title}
+      className="relative flex size-9 shrink-0 items-center justify-center rounded-lg outline-none transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
     >
-      {Icon ? (
-        <Icon
+      {Icon ? <Icon className="size-4" /> : null}
+      {isOpen ? (
+        <span
+          aria-hidden
           className={cn(
-            "size-4",
-            iconOnly ? "" : "text-muted-foreground",
+            "pointer-events-none absolute size-1 rounded-full bg-foreground/70",
+            indicatorClassesFor(position),
           )}
         />
-      ) : null}
-      {!iconOnly ? (
-        <span className="min-w-0 flex-1 truncate text-sm">{item.title}</span>
       ) : null}
       {item.badge ? (
         <Badge
           variant="secondary"
           className={cn(
-            "text-[11px]",
-            iconOnly && "pointer-events-none absolute -top-1 -right-1",
+            "pointer-events-none absolute text-[11px]",
+            badgeClassesFor(position),
           )}
         >
           {item.badge}
@@ -128,20 +155,58 @@ function renderDockButton(
   )
 }
 
+/**
+ * Right-click menu shared by every dock item. Wraps `children` in a Base
+ * UI ContextMenu so the trigger area is the dock button itself.
+ */
+function DockItemContextMenu({
+  item,
+  children,
+}: {
+  item: PinnedItem
+  children: ReactNode
+}) {
+  const setPlacement = usePlacement((s) => s.setPlacement)
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="contents">{children}</ContextMenuTrigger>
+      <ContextMenuPopup align="start" className="min-w-44">
+        <MenuItem onClick={() => setPlacement(item.action, "dashboard")}>
+          Move to dashboard
+        </MenuItem>
+        <MenuSeparator />
+        <MenuItem
+          variant="destructive"
+          onClick={() => setPlacement(item.action, "none")}
+        >
+          Remove
+        </MenuItem>
+      </ContextMenuPopup>
+    </ContextMenu>
+  )
+}
+
 export function Dock() {
   const stored = useDock((s) => s.position)
   const isMobile = useIsMobile()
   const switcherOpen = useUI((s) => s.overlay === "switcher")
   const open = useContexts((s) => s.open)
-  const horizontalCap = useHorizontalCap()
+  const openContexts = useContexts((s) => s.openContexts)
 
   const position = effectivePosition(stored, isMobile)
   const orientation = orientationFor(position)
-  const items = useMemo(() => getNavItems(), [])
-  const cap =
-    orientation === "horizontal" ? horizontalCap : MAX_VISIBLE_VERTICAL
-  const visible = items.slice(0, cap)
-  const overflow = items.slice(cap)
+  const items = usePlacement((s) => s.dock)
+
+  // Build a set of currently-open singleton keys so we can mark the
+  // dock items that have a live context behind them.
+  const openKeys = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of openContexts) {
+      const key = openKeyFor({ type: c.type, params: c.params })
+      if (key) set.add(key)
+    }
+    return set
+  }, [openContexts])
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -205,13 +270,11 @@ export function Dock() {
   )
 
   if (position === "hidden") return null
+  // Avoid rendering an empty pill if the user has moved every item to the
+  // dashboard. The dock reappears as soon as anything is pinned to it.
+  if (items.length === 0) return null
 
   const tooltipSide = tooltipSideFor(position)
-  const popoverSide = popoverSideFor(position)
-  const stackClass =
-    orientation === "horizontal"
-      ? "flex-row items-center"
-      : "flex-col items-center"
 
   return (
     <div
@@ -231,64 +294,60 @@ export function Dock() {
         aria-label="Dock"
         aria-orientation={orientation}
         className={cn(
-          "flex gap-1 rounded-2xl border bg-card/80 p-1.5 shadow-lg/10 backdrop-blur",
-          stackClass,
+          "flex rounded-2xl border bg-card/80 p-1.5 shadow-lg/10 backdrop-blur",
+          // The pill shrink-wraps the inner ScrollArea up to a viewport-
+          // bounded cap. Once the natural item track exceeds the cap the
+          // pill stops growing and the ScrollArea takes over with
+          // scrolling + edge fades.
+          orientation === "horizontal"
+            ? "max-w-[calc(100vw-1.5rem)]"
+            : "max-h-[calc(100svh-6rem)]",
           // Honor iOS safe area at the bottom on mobile devices with a
           // chin/notch.
           orientation === "horizontal" &&
             "pb-[max(0.375rem,env(safe-area-inset-bottom))]",
         )}
       >
-        <TooltipProvider delay={0} closeDelay={0}>
-          {visible.map((item) => (
-            <Tooltip key={item.id}>
-              <TooltipTrigger
-                render={renderDockButton(item, (rect) =>
-                  open(item.action, rect),
-                )}
-              />
-              <TooltipPopup side={tooltipSide} sideOffset={8}>
-                {item.title}
-              </TooltipPopup>
-            </Tooltip>
-          ))}
-        </TooltipProvider>
-
-        {overflow.length > 0 ? (
-          <Popover>
-            <PopoverTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label={`More — ${overflow.length} ${
-                    overflow.length === 1 ? "item" : "items"
-                  }`}
-                  className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-[popup-open]:bg-accent/60 data-[popup-open]:text-foreground"
-                >
-                  <MoreHorizontal className="size-4" />
-                </button>
-              }
-            />
-            <PopoverPopup
-              side={popoverSide}
-              align="center"
-              sideOffset={8}
-              className="w-56"
+        <ScrollArea
+          // Hide the scrollbar entirely — the edge fades are the only
+          // affordance, matching the macOS Dock metaphor of an
+          // uncluttered surface that just scrolls.
+          className="**:data-[slot=scroll-area-scrollbar]:hidden"
+          scrollFade
+        >
+          <TooltipProvider delay={0} closeDelay={0}>
+            <div
+              className={cn(
+                "flex gap-1",
+                // `w-max` / `h-max` lets the inner track grow to its
+                // natural size beyond the constrained viewport so
+                // overflow actually engages the scroll axis.
+                orientation === "horizontal"
+                  ? "w-max flex-row items-center"
+                  : "h-max flex-col items-center",
+              )}
             >
-              <ul className="flex flex-col">
-                {overflow.map((item) => (
-                  <li key={item.id}>
-                    {renderDockButton(
-                      item,
-                      (rect) => open(item.action, rect),
-                      false,
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </PopoverPopup>
-          </Popover>
-        ) : null}
+              {items.map((item) => {
+                const key = openKeyFor(item.action)
+                const isOpen = key ? openKeys.has(key) : false
+                return (
+                  <DockItemContextMenu key={item.id} item={item}>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={renderDockButton(item, isOpen, position, (rect) =>
+                          open(item.action, rect),
+                        )}
+                      />
+                      <TooltipPopup side={tooltipSide} sideOffset={8}>
+                        {item.title}
+                      </TooltipPopup>
+                    </Tooltip>
+                  </DockItemContextMenu>
+                )
+              })}
+            </div>
+          </TooltipProvider>
+        </ScrollArea>
       </div>
     </div>
   )
