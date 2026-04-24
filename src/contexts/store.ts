@@ -93,6 +93,16 @@ type Actions = {
    */
   swapTo: (ref: ContextRef, originRect?: DOMRect | null) => string
   close: (id: string) => void
+  /**
+   * Close `id` with reverse-launch choreography when it's the last open
+   * context (and therefore the active one). The surface contracts back
+   * into `originRect` — typically the bounding rect of the dashboard
+   * launch tile or dock item that represents this context — then is
+   * physically removed once the animation completes. With no rect, no
+   * remaining-context coverage, or reduced motion, falls back to plain
+   * `close()`.
+   */
+  closeAnimated: (id: string, originRect?: DOMRect | null) => void
   closeOthers: (id: string) => void
   closeAll: () => void
   focus: (id: string) => void
@@ -347,6 +357,41 @@ export const useContexts = create<Store>((set, get) => ({
     set({ openContexts: remaining, activeId: nextActive, closedRecents: nextRecents })
     const active = remaining.find((c) => c.id === nextActive) ?? null
     syncHash(active)
+  },
+
+  closeAnimated: (id, originRect) => {
+    const state = get()
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    // Animation is only meaningful when the closing tile is the only
+    // thing the user can see at full size — i.e. the active context, and
+    // no siblings ready to slide in underneath it. With siblings, the
+    // next-most-recent active jumps to identity and covers the closing
+    // tile anyway, so an animation would just delay the visible result.
+    const isOnlyOpen =
+      state.openContexts.length === 1 && state.openContexts[0]!.id === id
+    const canAnimate =
+      !!originRect &&
+      !reducedMotion &&
+      isOnlyOpen &&
+      state.activeId === id &&
+      typeof window !== "undefined"
+    if (!canAnimate) {
+      get().close(id)
+      return
+    }
+    // Reuse the home flow for the visual portion (identity → rect, then
+    // hold invisibly at the rect). Once the surface is pinned at opacity
+    // 0, physically removing the context is invisible to the user.
+    get().goHome(originRect!)
+    window.setTimeout(() => {
+      // If something else has happened in the meantime (user opened a
+      // new context, etc.) `pendingHome` will have been cleared and the
+      // surface is no longer parked invisibly — but the user's intent
+      // was still to close this context, so honour it either way.
+      get().close(id)
+    }, HOME_ANIM_MS)
   },
 
   closeOthers: (id) => {

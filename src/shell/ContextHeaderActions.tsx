@@ -12,6 +12,7 @@ import {
 import { iconFor } from "@/contexts/registry"
 import type { Context, ContextRef } from "@/contexts/types"
 import { usePlacement, type Placement } from "@/stores/placementStore"
+import { closeFromActive } from "./closeFromActive"
 
 export function ContextHeaderActions({ ctx }: { ctx: Context }) {
   const action: ContextRef = {
@@ -54,6 +55,8 @@ export function ContextHeaderActions({ ctx }: { ctx: Context }) {
         </MenuRadioGroup>
         <MenuSeparator />
         <MenuItem disabled>Help</MenuItem>
+        <MenuSeparator />
+        <MenuItem onClick={() => closeFromActive(ctx)}>Close</MenuItem>
       </MenuPopup>
     </Menu>
   )
