@@ -71,7 +71,6 @@ export type WidgetDef =
 export type Recipe = {
   id: string
   role: string
-  greeting: string
   widgets: WidgetDef[]
 }
 

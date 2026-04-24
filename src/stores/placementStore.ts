@@ -143,10 +143,11 @@ function seedFromRecipe(): {
   dashboardOrder: DashboardSlot[]
   dock: PinnedItem[]
 } {
-  // Stage 1: build slot-without-rect entries in their seed order
-  // (pinned launch tiles first, then info / analytics widgets in
-  // recipe order) so the canonical packer below can lay them out
-  // top-left first, matching the legacy auto-flow rendering.
+  // Stage 1: build slot-without-rect entries in their seed order so
+  // the canonical packer below can lay them out top-left first.
+  // Analytics + info widgets are seeded BEFORE pinned launch tiles so
+  // data-rich widgets occupy the top of the dashboard and the smaller
+  // 1×1 launch tiles for less-prominent contexts flow underneath.
   type Pending =
     | { kind: "pinned"; pinned: PinnedItem; cells: { w: number; h: number } }
     | {
@@ -156,15 +157,6 @@ function seedFromRecipe(): {
       }
   const pending: Pending[] = []
   const dock: PinnedItem[] = []
-  for (const item of allNavItems()) {
-    const pinned = pinnedFromNavItem(item)
-    if (!pinned) continue
-    if (item.defaultPlacement === "dashboard") {
-      pending.push({ kind: "pinned", pinned, cells: { w: 1, h: 1 } })
-    } else {
-      dock.push(pinned)
-    }
-  }
 
   for (const w of adminRecipe.widgets) {
     if (w.kind !== "info" && w.kind !== "analytics") continue
@@ -173,6 +165,16 @@ function seedFromRecipe(): {
       widgetId: w.id,
       cells: cellsForSize(w.size),
     })
+  }
+
+  for (const item of allNavItems()) {
+    const pinned = pinnedFromNavItem(item)
+    if (!pinned) continue
+    if (item.defaultPlacement === "dashboard") {
+      pending.push({ kind: "pinned", pinned, cells: { w: 1, h: 1 } })
+    } else {
+      dock.push(pinned)
+    }
   }
 
   // Stage 2: pack into canonical 12-col coordinates with first-fit.

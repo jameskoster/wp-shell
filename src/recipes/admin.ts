@@ -1,7 +1,8 @@
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
-  FileEdit,
+  DollarSign,
   FileText,
   Image,
   Megaphone,
@@ -21,19 +22,18 @@ import type { Recipe } from "@/widgets/types"
 
 export const adminRecipe: Recipe = {
   id: "admin",
-  role: "Administrator",
-  greeting: "Everything across your site, in one place.",
+  role: "Solo store owner",
   widgets: [
     {
-      id: "metric-traffic",
+      id: "metric-revenue",
       kind: "analytics",
-      title: "Visitors this week",
-      icon: TrendingUp,
-      size: "lg",
+      title: "Revenue this week",
+      icon: DollarSign,
+      size: "xl",
       metric: {
-        value: "12.4k",
-        delta: { value: "+6.8%", trend: "up" },
-        sparkline: [820, 940, 1020, 1180, 1340, 1410, 1620],
+        value: "$8,420",
+        delta: { value: "+12.4%", trend: "up" },
+        sparkline: [620, 740, 690, 880, 940, 1120, 1260],
         caption: "vs. last week",
       },
     },
@@ -42,7 +42,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Orders this week",
       icon: ShoppingBag,
-      size: "lg",
+      size: "xl",
       metric: {
         value: "184",
         delta: { value: "+8", trend: "up" },
@@ -51,29 +51,55 @@ export const adminRecipe: Recipe = {
       },
     },
     {
-      id: "metric-comments",
+      id: "metric-conversion",
       kind: "analytics",
-      title: "New comments",
-      icon: MessageSquare,
-      size: "lg",
+      title: "Conversion rate",
+      icon: TrendingUp,
+      size: "xl",
       metric: {
-        value: "47",
-        delta: { value: "-3", trend: "down" },
-        sparkline: [9, 11, 8, 7, 6, 8, 5],
+        value: "2.4%",
+        delta: { value: "-0.2%", trend: "down" },
+        sparkline: [2.7, 2.8, 2.6, 2.5, 2.4, 2.5, 2.4],
         caption: "vs. last week",
       },
     },
     {
-      id: "info-drafts",
+      id: "info-recent-orders",
       kind: "info",
-      title: "Drafts in progress",
-      icon: FileEdit,
+      title: "Recent orders",
+      icon: ShoppingBag,
       size: "xl",
       items: [
-        { id: "d1", title: "Spring collection — preview", meta: "Edited 12m ago" },
-        { id: "d2", title: "About the studio", meta: "Edited 2h ago" },
-        { id: "d3", title: "Field notes: April", meta: "Edited yesterday" },
-        { id: "d4", title: "Press kit", meta: "Edited 3d ago" },
+        { id: "o1", title: "#1284 — Sarah K.", meta: "$129.00 · 2m ago" },
+        { id: "o2", title: "#1283 — Marco D.", meta: "$48.00 · 38m ago" },
+        { id: "o3", title: "#1282 — Anya P.", meta: "$210.00 · 1h ago" },
+        { id: "o4", title: "#1281 — Lee H.", meta: "$76.00 · 2h ago" },
+      ],
+    },
+    {
+      id: "info-low-stock",
+      kind: "info",
+      title: "Low stock",
+      icon: AlertTriangle,
+      size: "xl",
+      items: [
+        { id: "s1", title: "Linen tote — natural", meta: "3 left" },
+        { id: "s2", title: "Brass lamp — small", meta: "2 left" },
+        { id: "s3", title: "Ceramic mug — sage", meta: "5 left" },
+        { id: "s4", title: "Wool throw — charcoal", meta: "Out of stock" },
+      ],
+    },
+    {
+      id: "info-reviews",
+      kind: "info",
+      title: "New reviews",
+      icon: Star,
+      size: "xl",
+      items: [
+        { id: "r1", title: "★★★★★ Linen tote", meta: "“Beautiful quality.”" },
+        { id: "r2", title: "★★★★☆ Brass lamp", meta: "“Sturdier than I expected.”" },
+        { id: "r3", title: "★★★★★ Ceramic mug", meta: "“Bought four.”" },
+        { id: "r4", title: "★★★★☆ Wool throw", meta: "“Cosy and well made.”" },
       ],
     },
     {
@@ -83,22 +109,10 @@ export const adminRecipe: Recipe = {
       icon: Activity,
       size: "xl",
       items: [
-        { id: "a1", title: "Marco D. published “Brass lamp”", meta: "8m ago" },
-        { id: "a2", title: "Sarah K. moderated 3 comments", meta: "32m ago" },
-        { id: "a3", title: "Plugin update: Yoast SEO 22.4", meta: "1h ago" },
-        { id: "a4", title: "Anya P. updated the homepage", meta: "2h ago" },
-      ],
-    },
-    {
-      id: "info-moderation",
-      kind: "info",
-      title: "Awaiting moderation",
-      icon: MessageSquare,
-      size: "xl",
-      items: [
-        { id: "m1", title: "Lee H. on “Linen tote”", meta: "“Is this restocked?”" },
-        { id: "m2", title: "Anonymous on “Brass lamp”", meta: "Held — possible spam" },
-        { id: "m3", title: "Priya R. on “Ceramic mug”", meta: "“Love the colour.”" },
+        { id: "a1", title: "Published “Spring collection”", meta: "12m ago" },
+        { id: "a2", title: "Refunded order #1278", meta: "1h ago" },
+        { id: "a3", title: "Plugin update: Yoast SEO 22.4", meta: "2h ago" },
+        { id: "a4", title: "Updated homepage hero", meta: "Yesterday" },
       ],
     },
     {
@@ -106,31 +120,13 @@ export const adminRecipe: Recipe = {
       kind: "nav",
       size: "tall",
       items: [
-        {
-          id: "n-posts",
-          title: "Posts",
-          icon: PenSquare,
-          action: { type: "edit-page", params: { id: "posts" }, title: "Posts" },
-        },
+        // Dock — prominent commerce contexts the solo owner switches
+        // into multiple times a day.
         {
           id: "n-pages",
           title: "Pages",
           icon: FileText,
           action: { type: "pages" },
-          defaultPlacement: "dashboard",
-        },
-        {
-          id: "n-media",
-          title: "Media",
-          icon: Image,
-          action: { type: "edit-page", params: { id: "media" }, title: "Media" },
-        },
-        {
-          id: "n-comments",
-          title: "Comments",
-          icon: MessageSquare,
-          action: { type: "edit-page", params: { id: "comments" }, title: "Comments" },
-          badge: "3",
         },
         {
           id: "n-products",
@@ -141,7 +137,6 @@ export const adminRecipe: Recipe = {
             params: { id: "products" },
             title: "Products",
           },
-          defaultPlacement: "dashboard",
         },
         {
           id: "n-orders",
@@ -149,7 +144,6 @@ export const adminRecipe: Recipe = {
           icon: ShoppingBag,
           action: { type: "orders" },
           badge: "12",
-          defaultPlacement: "dashboard",
         },
         {
           id: "n-product-reviews",
@@ -163,13 +157,42 @@ export const adminRecipe: Recipe = {
           title: "Marketing",
           icon: Megaphone,
           action: { type: "marketing" },
-          defaultPlacement: "dashboard",
         },
         {
           id: "n-analytics",
           title: "Analytics",
           icon: BarChart3,
           action: { type: "analytics" },
+        },
+        {
+          id: "n-settings",
+          title: "Settings",
+          icon: Settings,
+          action: { type: "settings" },
+        },
+
+        // Dashboard launch tiles — less-prominent admin destinations.
+        // Reachable in one click but not worth permanent dock real estate.
+        {
+          id: "n-posts",
+          title: "Posts",
+          icon: PenSquare,
+          action: { type: "edit-page", params: { id: "posts" }, title: "Posts" },
+          defaultPlacement: "dashboard",
+        },
+        {
+          id: "n-media",
+          title: "Media",
+          icon: Image,
+          action: { type: "edit-page", params: { id: "media" }, title: "Media" },
+          defaultPlacement: "dashboard",
+        },
+        {
+          id: "n-comments",
+          title: "Comments",
+          icon: MessageSquare,
+          action: { type: "edit-page", params: { id: "comments" }, title: "Comments" },
+          badge: "3",
           defaultPlacement: "dashboard",
         },
         {
@@ -177,12 +200,14 @@ export const adminRecipe: Recipe = {
           title: "Users",
           icon: Users,
           action: { type: "edit-page", params: { id: "users" }, title: "Users" },
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-appearance",
           title: "Appearance",
           icon: Palette,
           action: { type: "editor", title: "Appearance" },
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-plugins",
@@ -190,18 +215,14 @@ export const adminRecipe: Recipe = {
           icon: Plug,
           action: { type: "edit-page", params: { id: "plugins" }, title: "Plugins" },
           badge: "2",
+          defaultPlacement: "dashboard",
         },
         {
           id: "n-tools",
           title: "Tools",
           icon: Wrench,
           action: { type: "edit-page", params: { id: "tools" }, title: "Tools" },
-        },
-        {
-          id: "n-settings",
-          title: "Settings",
-          icon: Settings,
-          action: { type: "settings" },
+          defaultPlacement: "dashboard",
         },
       ],
     },

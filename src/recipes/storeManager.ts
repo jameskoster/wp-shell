@@ -13,7 +13,6 @@ import type { Recipe } from "@/widgets/types"
 export const storeManagerRecipe: Recipe = {
   id: "store-manager",
   role: "Store Manager",
-  greeting: "Here’s what’s happening in your store today.",
   widgets: [
     {
       id: "tile-add-product",
