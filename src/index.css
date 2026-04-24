@@ -26,9 +26,14 @@
     /* Subtle rotation oscillation used to mark widgets as movable while
        customize mode is active. The two variants run with slightly
        different durations and offsets so neighbouring widgets don't
-       jiggle in lockstep, mirroring the iOS / macOS edit-mode pattern. */
+       jiggle in lockstep, mirroring the iOS / macOS edit-mode pattern.
+       The `-sm` variants use a larger rotation tuned for icon-sized
+       targets like dock items, where the default 0.6° angle resolves
+       to sub-pixel displacement and reads as no animation at all. */
     --animate-jiggle: jiggle 0.42s ease-in-out infinite;
     --animate-jiggle-alt: jiggle-alt 0.46s ease-in-out infinite;
+    --animate-jiggle-sm: jiggle-sm 0.42s ease-in-out infinite;
+    --animate-jiggle-sm-alt: jiggle-sm-alt 0.46s ease-in-out infinite;
     --font-heading: 'Inter', sans-serif;
     --font-mono: 'Geist Mono', monospace;
     --font-sans: 'Inter', sans-serif;
@@ -171,6 +176,22 @@
     transform: rotate(-0.7deg) translate3d(0, 0, 0);
         }
     }
+  @keyframes jiggle-sm {
+  0%, 100% {
+    transform: rotate(-2deg) translate3d(0, 0, 0);
+        }
+  50% {
+    transform: rotate(2deg) translate3d(0, 0, 0);
+        }
+    }
+  @keyframes jiggle-sm-alt {
+  0%, 100% {
+    transform: rotate(2.2deg) translate3d(0, 0, 0);
+        }
+  50% {
+    transform: rotate(-2.2deg) translate3d(0, 0, 0);
+        }
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -179,7 +200,9 @@
      brace it by neutralising the keyframes for any usage path that
      resolves directly to the animation token. */
   .animate-jiggle,
-  .animate-jiggle-alt {
+  .animate-jiggle-alt,
+  .animate-jiggle-sm,
+  .animate-jiggle-sm-alt {
     animation: none !important;
   }
 }

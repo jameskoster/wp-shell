@@ -237,8 +237,8 @@ function SortableDockItem({
       className={cn(
         "rounded-lg outline-none cursor-grab focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         index % 2 === 0
-          ? "motion-safe:animate-jiggle"
-          : "motion-safe:animate-jiggle-alt",
+          ? "motion-safe:animate-jiggle-sm"
+          : "motion-safe:animate-jiggle-sm-alt",
         isDragging && "z-10 cursor-grabbing opacity-50",
       )}
       aria-label={`Reposition ${item.title}`}
