@@ -10,7 +10,6 @@ import {
 import type {
   CellSize,
   DashboardSlot,
-  GridRect,
   NavItem,
   NavWidget,
   PinnedItem,
@@ -78,11 +77,12 @@ type PlacementState = {
    */
   reorderWidget: (id: string, toIndex: number) => void
   /**
-   * Resize an existing slot. The rect's `w`/`h` become the slot's new
-   * authored size; `col`/`row` are ignored (position is order-derived).
-   * Launch tile sizes are pinned at 1×1.
+   * Resize an existing slot to a new authored cell footprint. Position
+   * is order-derived, so resize never moves a widget — pack() reflows
+   * neighbours around the new size on the next render. Launch tile
+   * sizes are pinned at 1×1; calls against them are silent no-ops.
    */
-  resizeWidget: (id: string, rect: GridRect) => void
+  resizeWidget: (id: string, size: CellSize) => void
   /**
    * Re-add a recipe widget that was previously dismissed via
    * `removeWidget`. Appends a fresh `recipe` slot at the end of the
@@ -336,7 +336,7 @@ export const usePlacement = create<PlacementState>((set, get) => {
       set({ dashboardOrder: next })
     },
 
-    resizeWidget: (id, rect) => {
+    resizeWidget: (id, size) => {
       const state = get()
       const slot = state.dashboardOrder.find((s) => slotId(s) === id)
       if (!slot) return
@@ -344,9 +344,10 @@ export const usePlacement = create<PlacementState>((set, get) => {
       // doesn't have to special-case the affordance.
       if (isLaunchSlot(slot)) return
       const nextSize: CellSize = {
-        w: Math.max(1, Math.min(rect.w, CANONICAL_COLS)),
-        h: Math.max(1, rect.h),
+        w: Math.max(1, Math.min(size.w, CANONICAL_COLS)),
+        h: Math.max(1, size.h),
       }
+      if (slot.size.w === nextSize.w && slot.size.h === nextSize.h) return
       const next = updateSlotById(state.dashboardOrder, id, (s) => ({
         ...s,
         size: nextSize,

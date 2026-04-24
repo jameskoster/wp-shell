@@ -100,7 +100,8 @@ function DraggableSlot({
         "group/slot relative",
         // Hide the source during a move so the floating overlay reads
         // as "the thing I'm carrying"; during resize keep it visible
-        // (the ghost shows where the new bounds will land).
+        // — its rendered cell allocation already reflects the live
+        // previewed size, so the widget IS the affordance.
         isMovingMe && !isResizingMe && "opacity-0",
       )}
       style={{
@@ -140,42 +141,17 @@ function DraggableSlot({
 }
 
 /**
- * Cell-aligned ghost rendered during a move or resize gesture. Sits
- * inside the grid so its `gridColumn` / `gridRow` resolve to the same
- * coordinate system as every other slot — no positioning math needed.
- *
- * Renders both states (valid landing target / overlapping) with
- * distinct styles so the user sees immediately whether dropping right
- * now would commit or snap back.
- */
-function SnapGhost({ rect, valid }: { rect: GridRect; valid: boolean }) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "pointer-events-none rounded-xl border-2 border-dashed transition-colors",
-        valid
-          ? "border-ring bg-ring/5"
-          : "border-destructive bg-destructive/10",
-      )}
-      style={{
-        gridColumn: `${rect.col + 1} / span ${rect.w}`,
-        gridRow: `${rect.row + 1} / span ${rect.h}`,
-      }}
-    />
-  )
-}
-
-/**
  * Sortable widget grid. The container itself is the only droppable
  * for dashboard moves; per-slot positioning falls out of `pack()`,
  * which lays slots out row-major in array order at the current
  * breakpoint's column count.
  *
- * Resize handles, the snap ghost, and the floating drag overlay
- * together form the visual feedback during a drag — the source slot
- * is hidden for moves and held still for resizes, so the user always
- * has exactly one "live" element to track.
+ * During a move drag the previewed order is packed instead of the
+ * committed one (so neighbours visibly part). During a resize drag
+ * the dragged slot's size is overridden in the rendered slots list
+ * so the widget visibly grows / shrinks under the cursor and pack()
+ * reflows everything else around it. The FLIP layer animates both
+ * kinds of displacement.
  */
 export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
   const customizing = useCustomize((s) => s.active)
@@ -188,10 +164,22 @@ export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
   // visibly slide out of the way as the cursor moves; the dragged
   // slot is hidden in place (opacity-0) at its previewed cell, while
   // the floating overlay follows the cursor.
+  //
+  // During a resize drag, override the dragged slot's size with the
+  // live previewed footprint so pack() places the widget at its new
+  // cell allocation and reflows neighbours around it.
   const orderForRender = drag?.previewOrder ?? slots
+  const slotsForRender = useMemo(() => {
+    if (drag?.gesture !== "resize" || !drag.resize) return orderForRender
+    const targetId = drag.active.rawId
+    const nextSize = drag.resize.size
+    return orderForRender.map((s) =>
+      slotId(s) === targetId ? { ...s, size: nextSize } : s,
+    )
+  }, [orderForRender, drag])
   const packed = useMemo(
-    () => pack(orderForRender, cols),
-    [orderForRender, cols],
+    () => pack(slotsForRender, cols),
+    [slotsForRender, cols],
   )
 
   const { setNodeRef: setDropRef } = useDroppable({
@@ -302,9 +290,6 @@ export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
           />
         )
       })}
-      {drag?.gesture === "resize" && drag.ghost ? (
-        <SnapGhost rect={drag.ghost.rect} valid={drag.ghost.valid} />
-      ) : null}
     </div>
   )
 }

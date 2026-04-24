@@ -21,6 +21,7 @@ import {
 import { renderDockButton } from "./Dock"
 import { useDock } from "./dockStore"
 import type {
+  CellSize,
   DashboardSlot,
   GridRect,
   WidgetDef,
@@ -30,7 +31,6 @@ import {
   clampToGrid,
   indexForAnchor,
   indexForInsertion,
-  overlapsAny,
   pack,
   pointerToCell,
   reorderArray,
@@ -161,12 +161,14 @@ export type DragInfo = {
    */
   previewOrder?: DashboardSlot[]
   /**
-   * Cell-aligned snap target for a resize gesture. The grid renders
-   * this as a ghost outline; an invalid target (overlap) gets a
-   * destructive style. Move gestures don't use this — neighbours
-   * displacing in the previewed layout is the move affordance.
+   * Live previewed footprint for a resize gesture. The grid renders
+   * the dragged slot at this size (via a per-render slot override
+   * fed into pack()) so the widget visibly grows / shrinks under the
+   * cursor and neighbours displace through the same FLIP layer used
+   * for moves. No `valid` field — every size is valid in the order +
+   * size model, since pack() never produces overlaps.
    */
-  ghost?: { rect: GridRect; valid: boolean }
+  resize?: { size: CellSize }
 }
 
 import { createContext, useContext } from "react"
@@ -376,7 +378,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
           widget,
           size: rectToWidgetSize(originalRect),
         },
-        ghost: { rect: originalRect, valid: true },
+        resize: { size: { w: originalRect.w, h: originalRect.h } },
       })
       return
     }
@@ -519,6 +521,10 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
     const deltaRow = deltaToCells(e.delta.y, geometry)
 
     if (meta.kind === "resize") {
+      // applyResizeDelta still produces a rect (its w-edge / n-edge
+      // logic is convenient for clamping under the original anchor),
+      // but in the order + size model only w/h matter — col/row are
+      // discarded and pack() decides where the slot lands.
       const candidate = applyResizeDelta(
         meta.originalRect,
         meta.edge,
@@ -526,24 +532,18 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
         deltaRow,
         geometry.cols,
       )
-      const order = usePlacement.getState().dashboardOrder
-      const packed = pack(order, geometry.cols)
-      const others = packed
-        .filter((s) => slotId(s) !== meta.slotId)
-        .map((s) => s.rect)
-      const valid = !overlapsAny(candidate, others)
+      const nextSize: CellSize = { w: candidate.w, h: candidate.h }
 
       setActiveDrag((prev) => {
         if (!prev) return prev
-        const same =
-          prev.ghost &&
-          prev.ghost.rect.col === candidate.col &&
-          prev.ghost.rect.row === candidate.row &&
-          prev.ghost.rect.w === candidate.w &&
-          prev.ghost.rect.h === candidate.h &&
-          prev.ghost.valid === valid
-        if (same) return prev
-        return { ...prev, ghost: { rect: candidate, valid } }
+        if (
+          prev.resize &&
+          prev.resize.size.w === nextSize.w &&
+          prev.resize.size.h === nextSize.h
+        ) {
+          return prev
+        }
+        return { ...prev, resize: { size: nextSize } }
       })
       return
     }
@@ -590,7 +590,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
 
   function handleDragEnd(e: DragEndEvent) {
     const meta = dragMetaRef.current
-    const ghost = activeDrag?.ghost
+    const resize = activeDrag?.resize
     const insertionIndex = activeDrag?.insertionIndex
     setActiveDrag(null)
     dragMetaRef.current = null
@@ -600,12 +600,13 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
     const a = parseActive(String(active.id))
 
     // === Resize gesture ============================================
-    // Resize commits regardless of `over` — the snap target is in the
-    // grid, not under the cursor. Drops without a valid candidate
-    // simply revert (the source rect was never mutated during drag).
+    // Resize commits regardless of `over` — the snap target is the
+    // dragged slot itself, not a cursor location. Every size is valid
+    // (pack always succeeds), so we commit unconditionally. Drops
+    // with no resize state (no movement after drag start) are no-ops.
     if (a.kind === "resize") {
-      if (meta?.kind === "resize" && ghost?.valid) {
-        resizeWidget(meta.slotId, ghost.rect)
+      if (meta?.kind === "resize" && resize) {
+        resizeWidget(meta.slotId, resize.size)
       }
       return
     }
