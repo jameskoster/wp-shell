@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback } from "react"
+import { useMemo, useRef, useCallback, useLayoutEffect } from "react"
 import { GripVertical } from "lucide-react"
 import { useDraggable, useDroppable } from "@dnd-kit/core"
 import { useCustomize } from "@/shell/customizeStore"
@@ -95,6 +95,7 @@ function DraggableSlot({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      data-slot-id={id}
       className={cn(
         "group/slot relative",
         // Hide the source during a move so the floating overlay reads
@@ -208,6 +209,81 @@ export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
     },
     [setDropRef],
   )
+
+  // FLIP-animate slot reflows. CSS Grid doesn't animate `grid-column`
+  // or `grid-row`, so when `pack(previewOrder)` shifts a slot to a new
+  // cell we measure its old vs new viewport rect, paint it inverted to
+  // its old position with no transition, then on the next frame remove
+  // the transform with a transition — the browser interpolates from
+  // the apparent old position to the real new one.
+  //
+  // Keyed on a layout signature derived from `packed` so the effect
+  // only runs when at least one slot's id, position, or footprint
+  // changes. Re-measures every cycle (clears in-flight transforms
+  // first) so a fast drag that interrupts a previous animation still
+  // animates from the visually-current spot rather than snapping.
+  const slotRectsRef = useRef(new Map<string, DOMRect>())
+  const layoutSignature = packed
+    .map((s) => `${slotId(s)}:${s.rect.col},${s.rect.row},${s.rect.w}x${s.rect.h}`)
+    .join("|")
+
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const elements = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-slot-id]"),
+    )
+
+    // Clear any in-flight FLIP transforms before measuring so the
+    // recorded rects represent the true post-layout position, not a
+    // partial mid-animation offset. Done in two passes (clear, then
+    // measure) so the first getBoundingClientRect forces one reflow
+    // that picks up every cleared transform at once.
+    for (const el of elements) {
+      el.style.transition = "none"
+      el.style.transform = ""
+    }
+
+    const newRects = new Map<string, DOMRect>()
+    for (const el of elements) {
+      const id = el.dataset.slotId
+      if (!id) continue
+      newRects.set(id, el.getBoundingClientRect())
+    }
+
+    const prev = slotRectsRef.current
+    slotRectsRef.current = newRects
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduced) return
+
+    let anyAnimating = false
+    for (const el of elements) {
+      const id = el.dataset.slotId
+      if (!id) continue
+      const prevRect = prev.get(id)
+      const newRect = newRects.get(id)
+      if (!prevRect || !newRect) continue
+      const dx = prevRect.left - newRect.left
+      const dy = prevRect.top - newRect.top
+      if (dx === 0 && dy === 0) continue
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+      anyAnimating = true
+    }
+
+    if (!anyAnimating) return
+
+    const raf = requestAnimationFrame(() => {
+      for (const el of elements) {
+        if (!el.style.transform) continue
+        el.style.transition =
+          "transform 220ms var(--ease-glide)"
+        el.style.transform = ""
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [layoutSignature])
 
   return (
     <div ref={setContainerRef} className="widget-grid">
