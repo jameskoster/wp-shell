@@ -191,6 +191,16 @@ type DragMeta =
       originalRect: GridRect
       /** Index of the dragged slot in `dashboardOrder` at drag start. */
       currentIndex: number
+      /**
+       * The last insertion index resolved during this drag. Seeded to
+       * `currentIndex` and updated whenever `handleDragMove` switches
+       * targets. Fed to `indexForAnchor` as the sticky index so it
+       * biases its score toward staying put — the cursor must
+       * overshoot the boundary by at least one cell before the
+       * resolved index changes, which kills boundary-cell jitter
+       * between adjacent same-shape neighbours.
+       */
+      lastIndex: number
     }
   | {
       kind: "resize"
@@ -340,6 +350,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
         slotId: parsed.rawId,
         originalRect,
         currentIndex: packedIndex,
+        lastIndex: packedIndex,
       }
       setActiveDrag({
         active: { id, surface: "dashboard", rawId: parsed.rawId },
@@ -432,18 +443,19 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
       meta.currentIndex,
       { col: anchor.col, row: anchor.row },
       geometry.cols,
+      { stickyIndex: meta.lastIndex },
     )
 
-    setActiveDrag((prev) => {
-      if (!prev) return prev
-      if (prev.insertionIndex === insertionIndex) return prev
-      const previewOrder = reorderArray(
-        order,
-        meta.currentIndex,
-        insertionIndex,
-      )
-      return { ...prev, insertionIndex, previewOrder }
-    })
+    if (insertionIndex === meta.lastIndex) return
+    meta.lastIndex = insertionIndex
+    const previewOrder = reorderArray(
+      order,
+      meta.currentIndex,
+      insertionIndex,
+    )
+    setActiveDrag((prev) =>
+      prev ? { ...prev, insertionIndex, previewOrder } : prev,
+    )
   }
 
   function handleDragCancel() {

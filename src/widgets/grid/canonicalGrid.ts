@@ -132,25 +132,36 @@ export function pack<T extends { size: CellSize }>(
  * displacement, and again on drop to commit the reorder. O(n²) per
  * call — fine for the dashboard's slot counts.
  *
- * Ties resolve to the lower index (first encountered), which biases
+ * `stickyIndex` and `stickyBias` add hysteresis: the named index gets
+ * its score reduced by `stickyBias` so the cursor must travel
+ * meaningfully past the boundary before the resolved index switches.
+ * Default bias of 0.5 means the cursor must overshoot by at least one
+ * whole cell (anchors are integer cells), so adjacent same-shape
+ * neighbours don't oscillate when the cursor sits on the seam.
+ *
+ * Ties (after the bias) resolve to the lower index, which biases
  * insertion toward the start of the array when the cursor sits
- * between two equally-good positions.
+ * between two equally-good positions and there's no sticky index.
  */
 export function indexForAnchor<T extends { size: CellSize }>(
   order: T[],
   fromIndex: number,
   anchor: { col: number; row: number },
   cols: number,
+  options?: { stickyIndex?: number; stickyBias?: number },
 ): number {
   if (order.length === 0) return 0
+  const stickyIndex = options?.stickyIndex
+  const stickyBias = options?.stickyBias ?? 0.5
   let bestIndex = fromIndex
   let bestScore = Infinity
   for (let i = 0; i < order.length; i++) {
     const trial = reorderArray(order, fromIndex, i)
     const packed = pack(trial, cols)
     const rect = packed[i].rect
-    const score =
+    let score =
       Math.abs(rect.col - anchor.col) + Math.abs(rect.row - anchor.row)
+    if (stickyIndex !== undefined && i === stickyIndex) score -= stickyBias
     if (score < bestScore) {
       bestScore = score
       bestIndex = i
