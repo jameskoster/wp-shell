@@ -6,7 +6,7 @@ export function Dashboard() {
   const slots = usePlacement((s) => s.dashboardOrder)
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="flex-1 bg-[color-mix(in_srgb,var(--background),var(--color-black)_2%)] dark:bg-[color-mix(in_srgb,var(--background),var(--color-white)_2%)]">
       <div
         className="w-full py-8"
         style={{

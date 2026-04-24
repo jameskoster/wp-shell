@@ -111,7 +111,7 @@ function DraggableSlot({
     >
       <div
         className={cn(
-          "relative h-full w-full overflow-hidden rounded-xl",
+          "relative h-full w-full rounded-2xl",
           customizing &&
             "cursor-grab outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           // Suppress jiggle on the slot currently being resized — the
