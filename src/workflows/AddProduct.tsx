@@ -6,7 +6,6 @@ export function AddProduct({ ctx }: { ctx: Context }) {
   return (
     <StubWorkflow
       title="Add product"
-      description="This is where the product editor would live. In slice 1 it's a placeholder so we can prove the shell, switching, and entry-points end-to-end."
       icon={PackagePlus}
       hint="Try opening multiple workspaces and switching between them."
       ctx={ctx}

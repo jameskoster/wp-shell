@@ -13,7 +13,7 @@ import type { LucideIcon } from "lucide-react"
 
 type Props = {
   title: string
-  description: string
+  description?: string
   icon: LucideIcon
   hint?: string
   ctx?: Context
@@ -31,7 +31,7 @@ export function StubWorkflow({ title, description, icon: Icon, hint, ctx }: Prop
             <Icon />
           </EmptyMedia>
           <EmptyTitle>{title}</EmptyTitle>
-          <EmptyDescription>{description}</EmptyDescription>
+          {description ? <EmptyDescription>{description}</EmptyDescription> : null}
         </EmptyHeader>
         {hint ? (
           <EmptyContent>
