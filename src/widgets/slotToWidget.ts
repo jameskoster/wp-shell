@@ -10,9 +10,10 @@ import type {
  * grid renderer. Pinned slots inline their PinnedItem; recipe slots
  * look up the matching widget definition.
  *
- * Sizing now lives on the slot's `rect` (col/row/w/h) and is consumed
- * by `WidgetGrid` directly via CSS Grid placement — the returned
- * `WidgetDef`'s legacy `size` field is purely informational here.
+ * Sizing now lives on the slot's `size` (cell footprint) and is
+ * consumed by `WidgetGrid` via the packer's derived `rect` — the
+ * returned `WidgetDef`'s legacy `size` field is purely informational
+ * here.
  *
  * Lives in the widgets module (not Dashboard) so both `WidgetGrid` and
  * the customize-mode drag overlay can resolve slots without pulling in

@@ -5,10 +5,10 @@ import { adminRecipe } from "@/recipes/admin"
 import {
   CANONICAL_COLS,
   SIZE_TO_CELLS,
-  firstFreeRect,
-  overlapsAny,
+  reorderArray,
 } from "@/widgets/grid/canonicalGrid"
 import type {
+  CellSize,
   DashboardSlot,
   GridRect,
   NavItem,
@@ -32,9 +32,9 @@ type PlacementState = {
   /**
    * Single list covering every dashboard slot — pinned launch tiles
    * AND recipe widgets (info, analytics). Each slot owns a canonical
-   * `rect` (12-column coordinates); `WidgetGrid` reflows them per
-   * breakpoint via `compact()`. Free-form moves and resizes mutate
-   * `dashboardOrder` in place via `placeWidget` / `resizeWidget`.
+   * `size` (cell footprint); position falls out of array order via
+   * `pack()`. Free-form moves and resizes mutate `dashboardOrder` in
+   * place via `placeWidget` / `resizeWidget`.
    */
   dashboardOrder: DashboardSlot[]
   dock: PinnedItem[]
@@ -50,7 +50,8 @@ type PlacementState = {
    * isn't already pinned anywhere so we have something to render; when
    * the item already exists on either surface, the existing record is
    * moved verbatim and `meta` is ignored. New dashboard slots are
-   * placed at the first free 1×1 cell on the canonical grid.
+   * appended to the end of the order; the packer places them in the
+   * first available cell.
    */
   setPlacement: (
     action: ContextRef,
@@ -66,22 +67,21 @@ type PlacementState = {
   removeWidget: (id: string) => void
   isHidden: (id: string) => boolean
   /**
-   * Move an existing slot to a new canonical rect. No-op if the rect
-   * overlaps any other slot's rect, or if `id` doesn't correspond to a
-   * slot. Launch tile rects are forced to 1×1.
+   * Move an existing slot to a new index in `dashboardOrder`. Pure
+   * splice — the packer handles the resulting layout. No-op if `id`
+   * isn't on the dashboard or the move would be a no-op.
    */
-  placeWidget: (id: string, rect: GridRect) => void
+  reorderWidget: (id: string, toIndex: number) => void
   /**
-   * Resize an existing slot. Same overlap / launch-tile rules as
-   * `placeWidget`. Useful as a separate action so the DnD layer can
-   * route resize gestures distinctly from move gestures (and so we
-   * keep the option to add resize-only validations later).
+   * Resize an existing slot. The rect's `w`/`h` become the slot's new
+   * authored size; `col`/`row` are ignored (position is order-derived).
+   * Launch tile sizes are pinned at 1×1.
    */
   resizeWidget: (id: string, rect: GridRect) => void
   /**
    * Re-add a recipe widget that was previously dismissed via
-   * `removeWidget`. Appends a fresh `recipe` slot at the first free
-   * cell sized from the recipe's declarative size.
+   * `removeWidget`. Appends a fresh `recipe` slot at the end of the
+   * order; the packer places it in the first free cell.
    */
   unhideWidget: (id: string) => void
   /**
@@ -122,7 +122,7 @@ function navItemFor(action: ContextRef): NavItem | undefined {
   return allNavItems().find((i) => refKey(i.action) === key)
 }
 
-function cellsForSize(size: WidgetSize | undefined): { w: number; h: number } {
+function cellsForSize(size: WidgetSize | undefined): CellSize {
   return SIZE_TO_CELLS[size ?? "md"]
 }
 
@@ -143,27 +143,19 @@ function seedFromRecipe(): {
   dashboardOrder: DashboardSlot[]
   dock: PinnedItem[]
 } {
-  // Stage 1: build slot-without-rect entries in their seed order so
-  // the canonical packer below can lay them out top-left first.
-  // Analytics + info widgets are seeded BEFORE pinned launch tiles so
-  // data-rich widgets occupy the top of the dashboard and the smaller
-  // 1×1 launch tiles for less-prominent contexts flow underneath.
-  type Pending =
-    | { kind: "pinned"; pinned: PinnedItem; cells: { w: number; h: number } }
-    | {
-        kind: "recipe"
-        widgetId: string
-        cells: { w: number; h: number }
-      }
-  const pending: Pending[] = []
+  // Build slots in seed order. Analytics + info widgets come BEFORE
+  // pinned launch tiles so data-rich widgets occupy the top of the
+  // dashboard and the smaller 1×1 launch tiles for less-prominent
+  // contexts flow underneath. The packer takes it from here.
+  const dashboardOrder: DashboardSlot[] = []
   const dock: PinnedItem[] = []
 
   for (const w of adminRecipe.widgets) {
     if (w.kind !== "info" && w.kind !== "analytics") continue
-    pending.push({
+    dashboardOrder.push({
       kind: "recipe",
       widgetId: w.id,
-      cells: cellsForSize(w.size),
+      size: cellsForSize(w.size),
     })
   }
 
@@ -171,21 +163,11 @@ function seedFromRecipe(): {
     const pinned = pinnedFromNavItem(item)
     if (!pinned) continue
     if (item.defaultPlacement === "dashboard") {
-      pending.push({ kind: "pinned", pinned, cells: { w: 1, h: 1 } })
+      dashboardOrder.push({ kind: "pinned", pinned, size: { w: 1, h: 1 } })
     } else {
       dock.push(pinned)
     }
   }
-
-  // Stage 2: pack into canonical 12-col coordinates with first-fit.
-  const placedRects: GridRect[] = []
-  const dashboardOrder: DashboardSlot[] = pending.map((p) => {
-    const rect = firstFreeRect(placedRects, CANONICAL_COLS, p.cells.w, p.cells.h)
-    placedRects.push(rect)
-    return p.kind === "pinned"
-      ? { kind: "pinned", pinned: p.pinned, rect }
-      : { kind: "recipe", widgetId: p.widgetId, rect }
-  })
 
   return { dashboardOrder, dock }
 }
@@ -203,8 +185,7 @@ function isRecipeSlot(slot: DashboardSlot, widgetId: string): boolean {
 /**
  * Apply `transform` to the slot in `order` whose id is `id`, returning
  * the new array (or the original reference if `id` isn't found, so
- * Zustand can short-circuit). Centralised so move / resize share the
- * same lookup + immutable-update plumbing.
+ * Zustand can short-circuit). Used by `resizeWidget`.
  */
 function updateSlotById(
   order: DashboardSlot[],
@@ -216,25 +197,6 @@ function updateSlotById(
   const next = order.slice()
   next[idx] = transform(order[idx])
   return next
-}
-
-/**
- * Validate a candidate rect against the rest of the dashboard. Launch
- * tiles are coerced to 1×1 (clamped at the col/row anchor). Returns
- * the normalised rect on success, or `null` if it would overlap.
- */
-function validateRect(
-  order: DashboardSlot[],
-  id: string,
-  rect: GridRect,
-  isLaunch: boolean,
-): GridRect | null {
-  const normalised: GridRect = isLaunch
-    ? { col: rect.col, row: rect.row, w: 1, h: 1 }
-    : rect
-  const others = order.filter((s) => slotId(s) !== id).map((s) => s.rect)
-  if (overlapsAny(normalised, others)) return null
-  return normalised
 }
 
 export const usePlacement = create<PlacementState>((set, get) => {
@@ -295,18 +257,11 @@ export const usePlacement = create<PlacementState>((set, get) => {
       }
 
       if (next === "dashboard") {
-        // Allocate a fresh 1×1 cell for the new launch tile so it
-        // never overlaps an existing slot.
-        const rect = firstFreeRect(
-          nextOrder.map((s) => s.rect),
-          CANONICAL_COLS,
-          1,
-          1,
-        )
+        // Append to the order; pack() drops it in the first free cell.
         set({
           dashboardOrder: [
             ...nextOrder,
-            { kind: "pinned", pinned: item, rect },
+            { kind: "pinned", pinned: item, size: { w: 1, h: 1 } },
           ],
           dock: nextDock,
           hiddenWidgetIds: state.hiddenWidgetIds.filter((hid) => hid !== id),
@@ -348,16 +303,17 @@ export const usePlacement = create<PlacementState>((set, get) => {
 
     isHidden: (id) => get().hiddenWidgetIds.includes(id),
 
-    placeWidget: (id, rect) => {
+    reorderWidget: (id, toIndex) => {
       const state = get()
-      const slot = state.dashboardOrder.find((s) => slotId(s) === id)
-      if (!slot) return
-      const valid = validateRect(state.dashboardOrder, id, rect, isLaunchSlot(slot))
-      if (!valid) return
-      const next = updateSlotById(state.dashboardOrder, id, (s) => ({
-        ...s,
-        rect: valid,
-      }))
+      const fromIndex = state.dashboardOrder.findIndex(
+        (s) => slotId(s) === id,
+      )
+      if (fromIndex < 0) return
+      const clampedTo = Math.max(
+        0,
+        Math.min(state.dashboardOrder.length - 1, toIndex),
+      )
+      const next = reorderArray(state.dashboardOrder, fromIndex, clampedTo)
       if (next === state.dashboardOrder) return
       set({ dashboardOrder: next })
     },
@@ -369,11 +325,13 @@ export const usePlacement = create<PlacementState>((set, get) => {
       // Launch tiles can't resize — silently ignore so the DnD layer
       // doesn't have to special-case the affordance.
       if (isLaunchSlot(slot)) return
-      const valid = validateRect(state.dashboardOrder, id, rect, false)
-      if (!valid) return
+      const nextSize: CellSize = {
+        w: Math.max(1, Math.min(rect.w, CANONICAL_COLS)),
+        h: Math.max(1, rect.h),
+      }
       const next = updateSlotById(state.dashboardOrder, id, (s) => ({
         ...s,
-        rect: valid,
+        size: nextSize,
       }))
       if (next === state.dashboardOrder) return
       set({ dashboardOrder: next })
@@ -394,18 +352,15 @@ export const usePlacement = create<PlacementState>((set, get) => {
         })
         return
       }
-      const cells = cellsForSize(recipeWidget.size)
-      const rect = firstFreeRect(
-        state.dashboardOrder.map((s) => s.rect),
-        CANONICAL_COLS,
-        cells.w,
-        cells.h,
-      )
       set({
         hiddenWidgetIds: state.hiddenWidgetIds.filter((hid) => hid !== id),
         dashboardOrder: [
           ...state.dashboardOrder,
-          { kind: "recipe", widgetId: id, rect },
+          {
+            kind: "recipe",
+            widgetId: id,
+            size: cellsForSize(recipeWidget.size),
+          },
         ],
       })
     },

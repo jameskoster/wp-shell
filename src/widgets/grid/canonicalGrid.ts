@@ -1,19 +1,19 @@
-import type { GridRect, WidgetSize } from "@/widgets/types"
+import type { CellSize, GridRect, WidgetSize } from "@/widgets/types"
 
 /**
- * The dashboard's canonical reference width. User-authored placements
- * are stored against this column count; smaller breakpoints reflow via
- * `compact()`, larger ones don't exist (we cap at 12).
+ * The dashboard's canonical reference width. The packer lays slots out
+ * against this column count when at full width; smaller breakpoints
+ * reflow via `pack()`, larger ones don't exist (we cap at 12).
  */
 export const CANONICAL_COLS = 12
 
 /**
- * Translate the legacy `WidgetSize` token to a canonical cell count.
- * Used once at seed time to bootstrap the rect-based layout from the
- * recipe's declarative `size` field. After seeding, `rect` is the only
- * source of truth and `WidgetSize` is no longer consulted at render.
+ * Translate the recipe's declarative `WidgetSize` token to a cell
+ * footprint. Used at seed time to bootstrap each slot's authored
+ * `size`; after seeding, `size` is the only source of truth and
+ * `WidgetSize` is no longer consulted at render.
  */
-export const SIZE_TO_CELLS: Record<WidgetSize, { w: number; h: number }> = {
+export const SIZE_TO_CELLS: Record<WidgetSize, CellSize> = {
   sm: { w: 1, h: 1 },
   tall: { w: 1, h: 2 },
   md: { w: 2, h: 1 },
@@ -95,54 +95,81 @@ export function firstFreeRect(
 }
 
 /**
- * Reflow a list of slots into `cols` available columns, honouring each
- * slot's authored position when it still fits — only items that would
- * overflow the new width or collide with an earlier-placed slot get
- * relocated to the first free cell.
+ * Pack a list of slots into `cols` available columns in array order,
+ * row-major, first-fit. Each slot's `size` is authored; its `rect`
+ * (col/row position) is derived here.
  *
- * Slots are visited in `(row, col)` order so top-left items have first
- * claim on their authored cells; the rest fall through to firstFreeRect
- * if they can't keep their original position.
+ * Order is authoritative — there is no notion of an "authored
+ * position" for a slot. Two slots can't overlap because each is placed
+ * into the first cell that isn't yet occupied by an earlier slot. The
+ * grid is unbounded vertically, so the packer always succeeds.
  *
- * Returns the items in their original input order (stable for React
- * keys and DOM order). Used both for responsive reflow at narrower
- * breakpoints and as the seed packer when bootstrapping from a recipe.
+ * Used both as the responsive reflow at narrower breakpoints and as
+ * the seed packer when bootstrapping from a recipe.
  */
-export function compact<T extends { rect: GridRect }>(
+export function pack<T extends { size: CellSize }>(
   items: T[],
   cols: number,
-): T[] {
-  if (items.length === 0) return items
-  const indexed = items.map((item, i) => ({ item, i }))
-  // Sort by authored (row, col); ties broken by original index so the
-  // sort is stable.
-  indexed.sort((a, b) => {
-    if (a.item.rect.row !== b.item.rect.row) return a.item.rect.row - b.item.rect.row
-    if (a.item.rect.col !== b.item.rect.col) return a.item.rect.col - b.item.rect.col
-    return a.i - b.i
-  })
-
+): Array<T & { rect: GridRect }> {
   const placed: GridRect[] = []
-  const placedItems = new Map<number, T>()
-  for (const { item, i } of indexed) {
-    const w = Math.max(1, Math.min(item.rect.w, cols))
-    const h = Math.max(1, item.rect.h)
-    // First try the authored position (clamped so it can't overflow);
-    // only relocate if that lands on a previously-placed slot.
-    const desired: GridRect = {
-      col: Math.max(0, Math.min(item.rect.col, cols - w)),
-      row: Math.max(0, item.rect.row),
-      w,
-      h,
-    }
-    const rect = overlapsAny(desired, placed)
-      ? firstFreeRect(placed, cols, w, h)
-      : desired
+  return items.map((item) => {
+    const w = Math.max(1, Math.min(item.size.w, cols))
+    const h = Math.max(1, item.size.h)
+    const rect = firstFreeRect(placed, cols, w, h)
     placed.push(rect)
-    placedItems.set(i, { ...item, rect })
-  }
+    return { ...item, rect }
+  })
+}
 
-  return items.map((_, i) => placedItems.get(i)!)
+/**
+ * Resolve a target cell anchor to an insertion index in `order`,
+ * given the dragged slot's current index. Strategy: try each
+ * candidate index, pack the order with the dragged slot moved there,
+ * score by manhattan distance from the dragged slot's resulting rect
+ * to the target anchor, pick the minimum.
+ *
+ * Used live during a drag so the grid can render the previewed
+ * displacement, and again on drop to commit the reorder. O(n²) per
+ * call — fine for the dashboard's slot counts.
+ *
+ * Ties resolve to the lower index (first encountered), which biases
+ * insertion toward the start of the array when the cursor sits
+ * between two equally-good positions.
+ */
+export function indexForAnchor<T extends { size: CellSize }>(
+  order: T[],
+  fromIndex: number,
+  anchor: { col: number; row: number },
+  cols: number,
+): number {
+  if (order.length === 0) return 0
+  let bestIndex = fromIndex
+  let bestScore = Infinity
+  for (let i = 0; i < order.length; i++) {
+    const trial = reorderArray(order, fromIndex, i)
+    const packed = pack(trial, cols)
+    const rect = packed[i].rect
+    const score =
+      Math.abs(rect.col - anchor.col) + Math.abs(rect.row - anchor.row)
+    if (score < bestScore) {
+      bestScore = score
+      bestIndex = i
+    }
+  }
+  return bestIndex
+}
+
+/**
+ * Splice helper: move `from` to `to` in a new array. Returns the
+ * input reference unchanged when the move is a no-op so callers can
+ * short-circuit equality checks.
+ */
+export function reorderArray<T>(arr: T[], from: number, to: number): T[] {
+  if (from === to) return arr
+  const next = arr.slice()
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
 }
 
 /**

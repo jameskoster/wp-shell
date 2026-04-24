@@ -20,11 +20,18 @@ import {
 } from "@/widgets/WidgetGrid"
 import { renderDockButton } from "./Dock"
 import { useDock } from "./dockStore"
-import type { DashboardSlot, GridRect, WidgetDef } from "@/widgets/types"
+import type {
+  DashboardSlot,
+  GridRect,
+  WidgetDef,
+  WidgetSize,
+} from "@/widgets/types"
 import {
   clampToGrid,
-  compact,
+  indexForAnchor,
   overlapsAny,
+  pack,
+  reorderArray,
   rectToWidgetSize,
 } from "@/widgets/grid/canonicalGrid"
 import {
@@ -109,7 +116,8 @@ function parseOver(id: string): ParsedOver {
  * Read-only drag context published to descendants so they can adapt to
  * the in-flight drag (e.g. the customize bar swaps in the Remove zone,
  * the dock highlights when it's a valid drop target, the grid renders
- * a snap ghost at the candidate cell).
+ * the in-flight reorder by packing `previewOrder` instead of the
+ * committed `dashboardOrder`).
  */
 export type DragInfo = {
   active: { id: string; surface: "dashboard" | "dock"; rawId: string }
@@ -129,19 +137,32 @@ export type DragInfo = {
   /**
    * Captured at drag start so the `DragOverlay` can render an
    * unambiguous, cursor-following preview of the item being moved.
-   * Resize gestures don't render a floating overlay (the snap ghost
-   * is the active feedback) — preview is still populated so context
-   * consumers can read it if they need to.
+   * For dashboard widgets, `size` is the cell-derived density token
+   * captured at drag start (the dragged slot's footprint never changes
+   * mid-drag — only its position in the order does).
    */
   preview:
-    | { kind: "dashboard"; widget: WidgetDef }
+    | { kind: "dashboard"; widget: WidgetDef; size: WidgetSize }
     | { kind: "dock"; item: PinnedItem }
   /**
-   * Cell-aligned snap target inside the dashboard grid, set during a
-   * dashboard move or any resize gesture. The grid renders this as a
-   * ghost outline; an invalid target (overlap) gets a destructive
-   * style. Absent for cross-surface drags (dock-only or remove-zone
-   * moves) and before the first onDragMove fires.
+   * Live insertion target for a dashboard move gesture. Computed from
+   * the cursor's cell on every onDragMove and committed to the store
+   * on drop via `reorderWidget`. Absent for resize, dock-only drags,
+   * and before the first onDragMove fires.
+   */
+  insertionIndex?: number
+  /**
+   * `dashboardOrder` with the dragged slot spliced to `insertionIndex`.
+   * Published so the grid can pack-and-render the previewed layout
+   * during the drag — neighbours visibly slide out of the way as the
+   * cursor moves. Same absence semantics as `insertionIndex`.
+   */
+  previewOrder?: DashboardSlot[]
+  /**
+   * Cell-aligned snap target for a resize gesture. The grid renders
+   * this as a ghost outline; an invalid target (overlap) gets a
+   * destructive style. Move gestures don't use this — neighbours
+   * displacing in the previewed layout is the move affordance.
    */
   ghost?: { rect: GridRect; valid: boolean }
 }
@@ -158,7 +179,19 @@ export function useActiveDrag(): DragInfo | null {
  * `onDragEnd`. Lives in a ref so updates don't churn re-renders.
  */
 type DragMeta =
-  | { kind: "dashboard-move"; slotId: string; originalRect: GridRect }
+  | {
+      kind: "dashboard-move"
+      slotId: string
+      /**
+       * The dragged slot's packed rect at drag start. Only its `col`
+       * and `row` are read — they're the anchor cell from which cursor
+       * deltas convert to a candidate cell. The `w`/`h` survive for
+       * symmetry with the resize meta.
+       */
+      originalRect: GridRect
+      /** Index of the dragged slot in `dashboardOrder` at drag start. */
+      currentIndex: number
+    }
   | {
       kind: "resize"
       slotId: string
@@ -244,7 +277,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
   )
 
   const setPlacement = usePlacement((s) => s.setPlacement)
-  const placeWidget = usePlacement((s) => s.placeWidget)
+  const reorderWidget = usePlacement((s) => s.reorderWidget)
   const resizeWidget = usePlacement((s) => s.resizeWidget)
 
   const [activeDrag, setActiveDrag] = useState<DragInfo | null>(null)
@@ -263,17 +296,18 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
     const geometry = getActiveGridGeometry()
     const cols = geometry?.cols ?? 12
 
+    // The handle's drag origin is the slot's CURRENT visible (packed)
+    // rect — same coordinate system every move event will produce
+    // candidates in. `pack()` returns slots with rects attached, so we
+    // look up the dragged slot in the packed array directly.
+    const packed = pack(state.dashboardOrder, cols)
+
     if (parsed.kind === "resize") {
-      const slot = findSlot(state.dashboardOrder, parsed.slotId)
-      if (!slot) return
-      const widget = slotToWidget(slot)
+      const packedSlot = packed.find((s) => slotId(s) === parsed.slotId)
+      if (!packedSlot) return
+      const widget = slotToWidget(packedSlot)
       if (!widget) return
-      // The handle's drag origin is the slot's CURRENT visible
-      // (reflowed) rect — same coordinate system every move event will
-      // produce candidates in.
-      const reflowed = compact(state.dashboardOrder, cols)
-      const reflowedSlot = findSlot(reflowed, parsed.slotId)
-      const originalRect = reflowedSlot?.rect ?? slot.rect
+      const originalRect = packedSlot.rect
       dragMetaRef.current = {
         kind: "resize",
         slotId: parsed.slotId,
@@ -284,31 +318,43 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
         active: { id, surface: "dashboard", rawId: parsed.slotId },
         gesture: "resize",
         isLaunchTile: false,
-        preview: { kind: "dashboard", widget },
+        preview: {
+          kind: "dashboard",
+          widget,
+          size: rectToWidgetSize(originalRect),
+        },
         ghost: { rect: originalRect, valid: true },
       })
       return
     }
 
     if (parsed.kind === "dashboard") {
-      const slot = findSlot(state.dashboardOrder, parsed.rawId)
-      if (!slot) return
-      const widget = slotToWidget(slot)
+      const packedIndex = packed.findIndex((s) => slotId(s) === parsed.rawId)
+      if (packedIndex < 0) return
+      const packedSlot = packed[packedIndex]
+      const widget = slotToWidget(packedSlot)
       if (!widget) return
-      const reflowed = compact(state.dashboardOrder, cols)
-      const reflowedSlot = findSlot(reflowed, parsed.rawId)
-      const originalRect = reflowedSlot?.rect ?? slot.rect
+      const originalRect = packedSlot.rect
       dragMetaRef.current = {
         kind: "dashboard-move",
         slotId: parsed.rawId,
         originalRect,
+        currentIndex: packedIndex,
       }
       setActiveDrag({
         active: { id, surface: "dashboard", rawId: parsed.rawId },
         gesture: "move",
         isLaunchTile: isPinnedTile(parsed.rawId),
-        preview: { kind: "dashboard", widget },
-        ghost: { rect: originalRect, valid: true },
+        preview: {
+          kind: "dashboard",
+          widget,
+          size: rectToWidgetSize(originalRect),
+        },
+        // Initial preview = no movement yet; insertion stays at the
+        // current index, previewOrder is the committed order. Updated
+        // by handleDragMove as the cursor moves.
+        insertionIndex: packedIndex,
+        previewOrder: state.dashboardOrder,
       })
       return
     }
@@ -336,49 +382,67 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
     const deltaCol = deltaToCells(e.delta.x, geometry)
     const deltaRow = deltaToCells(e.delta.y, geometry)
 
-    let candidate: GridRect
     if (meta.kind === "resize") {
-      candidate = applyResizeDelta(
+      const candidate = applyResizeDelta(
         meta.originalRect,
         meta.edge,
         deltaCol,
         deltaRow,
         geometry.cols,
       )
-    } else {
-      candidate = clampToGrid(
-        {
-          col: meta.originalRect.col + deltaCol,
-          row: meta.originalRect.row + deltaRow,
-          w: meta.originalRect.w,
-          h: meta.originalRect.h,
-        },
-        geometry.cols,
-      )
+      const order = usePlacement.getState().dashboardOrder
+      const packed = pack(order, geometry.cols)
+      const others = packed
+        .filter((s) => slotId(s) !== meta.slotId)
+        .map((s) => s.rect)
+      const valid = !overlapsAny(candidate, others)
+
+      setActiveDrag((prev) => {
+        if (!prev) return prev
+        const same =
+          prev.ghost &&
+          prev.ghost.rect.col === candidate.col &&
+          prev.ghost.rect.row === candidate.row &&
+          prev.ghost.rect.w === candidate.w &&
+          prev.ghost.rect.h === candidate.h &&
+          prev.ghost.valid === valid
+        if (same) return prev
+        return { ...prev, ghost: { rect: candidate, valid } }
+      })
+      return
     }
 
-    // Validate against the current reflowed layout, excluding self —
-    // the user can drop on their own current cells without that
-    // counting as overlap (especially useful for resize gestures that
-    // shrink rather than move).
+    // === Dashboard move ============================================
+    // Resolve the cursor's anchor cell, look up the insertion index
+    // that would land the dragged slot closest to that anchor after
+    // re-packing, and publish a previewOrder so the grid renders the
+    // displacement live.
+    const anchor = clampToGrid(
+      {
+        col: meta.originalRect.col + deltaCol,
+        row: meta.originalRect.row + deltaRow,
+        w: 1,
+        h: 1,
+      },
+      geometry.cols,
+    )
     const order = usePlacement.getState().dashboardOrder
-    const reflowed = compact(order, geometry.cols)
-    const others = reflowed
-      .filter((s) => slotId(s) !== meta.slotId)
-      .map((s) => s.rect)
-    const valid = !overlapsAny(candidate, others)
+    const insertionIndex = indexForAnchor(
+      order,
+      meta.currentIndex,
+      { col: anchor.col, row: anchor.row },
+      geometry.cols,
+    )
 
     setActiveDrag((prev) => {
       if (!prev) return prev
-      const same =
-        prev.ghost &&
-        prev.ghost.rect.col === candidate.col &&
-        prev.ghost.rect.row === candidate.row &&
-        prev.ghost.rect.w === candidate.w &&
-        prev.ghost.rect.h === candidate.h &&
-        prev.ghost.valid === valid
-      if (same) return prev
-      return { ...prev, ghost: { rect: candidate, valid } }
+      if (prev.insertionIndex === insertionIndex) return prev
+      const previewOrder = reorderArray(
+        order,
+        meta.currentIndex,
+        insertionIndex,
+      )
+      return { ...prev, insertionIndex, previewOrder }
     })
   }
 
@@ -390,6 +454,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
   function handleDragEnd(e: DragEndEvent) {
     const meta = dragMetaRef.current
     const ghost = activeDrag?.ghost
+    const insertionIndex = activeDrag?.insertionIndex
     setActiveDrag(null)
     dragMetaRef.current = null
 
@@ -410,19 +475,17 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
 
     // === Dashboard move into empty space below the grid =============
     // The grid's droppable rect is only as tall as the rows it
-    // currently contains, so dragging into a not-yet-existent row puts
-    // the pointer outside any droppable and leaves `over` null. The
-    // ghost is the source of truth here — it's already clamped to the
-    // grid's columns and validated against the reflowed layout — so
-    // honor it the same way resize does. Without this, the indicator
-    // promises a drop that the release silently discards.
+    // currently contains, so dragging into a not-yet-existent row
+    // leaves `over` null. The insertion index was computed live from
+    // the cursor anchor and is always valid (no overlap is possible
+    // in the sortable model), so we commit unconditionally.
     if (!over) {
       if (
         a.kind === "dashboard" &&
         meta?.kind === "dashboard-move" &&
-        ghost?.valid
+        insertionIndex !== undefined
       ) {
-        placeWidget(meta.slotId, ghost.rect)
+        reorderWidget(meta.slotId, insertionIndex)
       }
       return
     }
@@ -442,14 +505,15 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
     // === Drop on the Dashboard grid =================================
     if (o.kind === "zone" && o.rawId === DASHBOARD_DROPPABLE_ID) {
       if (a.kind === "dashboard") {
-        if (meta?.kind === "dashboard-move" && ghost?.valid) {
-          placeWidget(meta.slotId, ghost.rect)
+        if (meta?.kind === "dashboard-move" && insertionIndex !== undefined) {
+          reorderWidget(meta.slotId, insertionIndex)
         }
         return
       }
       if (a.kind === "dock") {
         // Cross-surface dock → dashboard. v1 places at the first free
         // cell (via setPlacement); the user can re-position from there.
+        // Step 5 will route this through the live insertion index.
         const item = usePlacement.getState().dock.find((p) => p.id === a.rawId)
         if (item) setPlacement(item.action, "dashboard")
         return
@@ -520,7 +584,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
   return (
     <DndContext
       sensors={sensors}
-      // `pointerWithin` is required for the free-form grid: it only
+      // `pointerWithin` is required for the sortable grid: it only
       // surfaces a droppable when the pointer is genuinely inside it,
       // so dragging a launch tile *past* the dashboard's last row
       // toward an empty area no longer gets pulled into the dock by
@@ -528,7 +592,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
       // since its center sits closer to the cursor than any dashboard
       // cell). When the pointer lands on no droppable at all, `over`
       // is null and `handleDragEnd` falls back to committing the
-      // already-validated dashboard ghost.
+      // live insertion index from the cursor anchor.
       collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
@@ -565,15 +629,12 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
 function DragPreview({ info }: { info: DragInfo }) {
   if (info.gesture === "resize") return null
   if (info.preview.kind === "dashboard") {
-    // Match the renderer's content-density to the dragged rect so the
-    // floating preview reads at the same density as the placeholder
-    // it left behind in the grid.
-    const sizeHint = info.ghost
-      ? rectToWidgetSize(info.ghost.rect)
-      : info.preview.widget.size
+    // Use the size token captured at drag start — the dragged slot's
+    // footprint never changes mid-drag, only its position in the
+    // order, so the floating preview reads at a stable density.
     return (
       <div className="h-full w-full overflow-hidden rounded-xl rotate-[1.5deg] cursor-grabbing shadow-2xl ring-1 ring-border">
-        {renderWidget(info.preview.widget, sizeHint)}
+        {renderWidget(info.preview.widget, info.preview.size)}
       </div>
     )
   }

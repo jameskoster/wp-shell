@@ -93,13 +93,21 @@ export type PinnedItem = {
 /**
  * Position + size on the canonical 12-column dashboard grid. Origin is
  * top-left, all values are integer cell counts. The canonical width is
- * always 12; smaller breakpoints reflow via `compact()` rather than
+ * always 12; smaller breakpoints reflow via `pack()` rather than
  * storing per-breakpoint coordinates.
+ *
+ * Authored slots no longer carry a rect — position is derived from
+ * array order via the row-major packer. `GridRect` survives as the
+ * shape `pack()` *returns* (and the DnD layer reasons about), but it
+ * never appears in the persisted store.
  *
  * Launch tiles are forced to `w: 1, h: 1`; non-launch widgets accept
  * any `w: 1..12, h: 1..N`.
  */
 export type GridRect = { col: number; row: number; w: number; h: number }
+
+/** Cell footprint authored on a slot. Position falls out of `pack()`. */
+export type CellSize = { w: number; h: number }
 
 /**
  * Entry in the dashboard grid. A slot is either:
@@ -110,13 +118,14 @@ export type GridRect = { col: number; row: number; w: number; h: number }
  *    the pin's source data changes shape.
  *  - `recipe` — references a recipe widget by id (info, analytics, …).
  *
- * Each slot owns a canonical `rect` (col/row/w/h on the 12-col grid).
- * The placement store is the single source of truth; rendering reflows
- * `rect` per breakpoint via `compact()`. A widget is on the dashboard
- * iff it appears in `dashboardOrder`; recipe widgets dismissed via the
- * per-widget menu are absent from the array AND mirrored in
- * `hiddenWidgetIds` so the Add widgets menu can offer them back.
+ * Each slot owns a canonical `size` (cell footprint) and its position
+ * in the `dashboardOrder` array is its position in row-major reading
+ * order. `WidgetGrid` derives the actual `rect` per breakpoint via
+ * `pack()`. A widget is on the dashboard iff it appears in
+ * `dashboardOrder`; recipe widgets dismissed via the per-widget menu
+ * are absent from the array AND mirrored in `hiddenWidgetIds` so the
+ * Add widgets menu can offer them back.
  */
 export type DashboardSlot =
-  | { kind: "pinned"; pinned: PinnedItem; rect: GridRect }
-  | { kind: "recipe"; widgetId: string; rect: GridRect }
+  | { kind: "pinned"; pinned: PinnedItem; size: CellSize }
+  | { kind: "recipe"; widgetId: string; size: CellSize }

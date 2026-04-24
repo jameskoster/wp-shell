@@ -10,7 +10,7 @@ import { LaunchTile } from "./LaunchTile"
 import { InfoWidget } from "./InfoWidget"
 import { AnalyticsWidget } from "./AnalyticsWidget"
 import { NavWidget } from "./NavWidget"
-import { compact, rectToWidgetSize } from "./grid/canonicalGrid"
+import { pack, rectToWidgetSize } from "./grid/canonicalGrid"
 import { useGridGeometry } from "./grid/useGridGeometry"
 import { ResizeHandles } from "./grid/ResizeHandles"
 import { slotToWidget } from "./slotToWidget"
@@ -70,7 +70,7 @@ function DraggableSlot({
   customizing,
   jiggleAlt,
 }: {
-  slot: DashboardSlot
+  slot: DashboardSlot & { rect: GridRect }
   widget: WidgetDef
   customizing: boolean
   jiggleAlt: boolean
@@ -166,9 +166,10 @@ function SnapGhost({ rect, valid }: { rect: GridRect; valid: boolean }) {
 }
 
 /**
- * Free-form widget grid. The container itself is the only droppable
- * for dashboard moves; per-slot positioning comes from the reflowed
- * `rect` (canonical store coords compacted to the current breakpoint).
+ * Sortable widget grid. The container itself is the only droppable
+ * for dashboard moves; per-slot positioning falls out of `pack()`,
+ * which lays slots out row-major in array order at the current
+ * breakpoint's column count.
  *
  * Resize handles, the snap ghost, and the floating drag overlay
  * together form the visual feedback during a drag — the source slot
@@ -181,8 +182,16 @@ export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
   const geometry = useGridGeometry(containerRef)
   const cols = geometry?.cols ?? 12
 
-  const reflowed = useMemo(() => compact(slots, cols), [slots, cols])
   const drag = useActiveDrag()
+  // During a move drag, render the previewed order so neighbours
+  // visibly slide out of the way as the cursor moves; the dragged
+  // slot is hidden in place (opacity-0) at its previewed cell, while
+  // the floating overlay follows the cursor.
+  const orderForRender = drag?.previewOrder ?? slots
+  const packed = useMemo(
+    () => pack(orderForRender, cols),
+    [orderForRender, cols],
+  )
 
   const { setNodeRef: setDropRef } = useDroppable({
     id: DASHBOARD_DROPPABLE_ID,
@@ -202,7 +211,7 @@ export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
 
   return (
     <div ref={setContainerRef} className="widget-grid">
-      {reflowed.map((slot, i) => {
+      {packed.map((slot, i) => {
         const widget = slotToWidget(slot)
         if (!widget) return null
         return (
@@ -217,7 +226,7 @@ export function WidgetGrid({ slots }: { slots: DashboardSlot[] }) {
           />
         )
       })}
-      {drag?.ghost ? (
+      {drag?.gesture === "resize" && drag.ghost ? (
         <SnapGhost rect={drag.ghost.rect} valid={drag.ghost.valid} />
       ) : null}
     </div>
