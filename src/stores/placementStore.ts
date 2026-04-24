@@ -49,14 +49,19 @@ type PlacementState = {
    * Move an item between surfaces. `meta` is required when the item
    * isn't already pinned anywhere so we have something to render; when
    * the item already exists on either surface, the existing record is
-   * moved verbatim and `meta` is ignored. New dashboard slots are
-   * appended to the end of the order; the packer places them in the
-   * first available cell.
+   * moved verbatim and `meta` is ignored.
+   *
+   * `insertAt` (optional, dashboard-only) splices the new slot into
+   * `dashboardOrder` at the given index instead of appending. Used by
+   * cross-surface dock → dashboard drags that already resolved a live
+   * insertion index from the cursor; menu-driven adds (Add widget,
+   * etc.) omit it and get the default append-then-pack behaviour.
    */
   setPlacement: (
     action: ContextRef,
     next: Placement,
     meta?: PlacementMeta,
+    insertAt?: number,
   ) => void
   /**
    * Remove any widget from the dashboard by id. Pinned launch tile ids
@@ -216,7 +221,7 @@ export const usePlacement = create<PlacementState>((set, get) => {
       return "none"
     },
 
-    setPlacement: (action, next, meta) => {
+    setPlacement: (action, next, meta, insertAt) => {
       const id = pinnedIdFor(action)
       const state = get()
 
@@ -257,12 +262,25 @@ export const usePlacement = create<PlacementState>((set, get) => {
       }
 
       if (next === "dashboard") {
-        // Append to the order; pack() drops it in the first free cell.
+        const newSlot: DashboardSlot = {
+          kind: "pinned",
+          pinned: item,
+          size: { w: 1, h: 1 },
+        }
+        // `insertAt` lets cross-surface drags drop at the cursor's
+        // resolved insertion index. Omitted by menu-driven adds, which
+        // append and let pack() drop the slot in the first free cell.
+        const targetIndex =
+          insertAt === undefined
+            ? nextOrder.length
+            : Math.max(0, Math.min(nextOrder.length, insertAt))
+        const dashboardOrderNext = [
+          ...nextOrder.slice(0, targetIndex),
+          newSlot,
+          ...nextOrder.slice(targetIndex),
+        ]
         set({
-          dashboardOrder: [
-            ...nextOrder,
-            { kind: "pinned", pinned: item, size: { w: 1, h: 1 } },
-          ],
+          dashboardOrder: dashboardOrderNext,
           dock: nextDock,
           hiddenWidgetIds: state.hiddenWidgetIds.filter((hid) => hid !== id),
         })

@@ -29,8 +29,10 @@ import type {
 import {
   clampToGrid,
   indexForAnchor,
+  indexForInsertion,
   overlapsAny,
   pack,
+  pointerToCell,
   reorderArray,
   rectToWidgetSize,
 } from "@/widgets/grid/canonicalGrid"
@@ -208,7 +210,17 @@ type DragMeta =
       originalRect: GridRect
       edge: ResizeEdge
     }
-  | { kind: "dock-move"; rawId: string }
+  | {
+      kind: "dock-move"
+      rawId: string
+      /**
+       * Last insertion index resolved while the cursor was over the
+       * dashboard. Drives hysteresis the same way the dashboard-move
+       * variant does and survives leaving / re-entering the grid so
+       * the preview lands in the same spot on re-entry.
+       */
+      lastDashboardIndex?: number
+    }
 
 /**
  * Translate a pixel delta along one axis to a cell-count delta, using
@@ -219,6 +231,37 @@ function deltaToCells(deltaPx: number, geometry: GridGeometry): number {
   const stride = geometry.cellSize + geometry.gap
   if (stride <= 0) return 0
   return Math.round(deltaPx / stride)
+}
+
+/**
+ * Resolve the live cursor position in client coordinates from a drag
+ * event. `activatorEvent` is the original PointerDown that started
+ * the drag; adding `delta` reconstructs the current pointer position
+ * without subscribing to a separate window pointermove listener.
+ *
+ * Returns null for activator types we don't expect (e.g. KeyboardEvent
+ * from the keyboard sensor — keyboard drags don't have pointer
+ * coords, and the cross-surface dock → dashboard preview doesn't make
+ * sense for them anyway).
+ */
+function cursorFromEvent(
+  e: { activatorEvent: Event; delta: { x: number; y: number } },
+): { x: number; y: number } | null {
+  const a = e.activatorEvent
+  let x: number | null = null
+  let y: number | null = null
+  if (a instanceof PointerEvent || a instanceof MouseEvent) {
+    x = a.clientX
+    y = a.clientY
+  } else if (typeof TouchEvent !== "undefined" && a instanceof TouchEvent) {
+    const t = a.touches[0] ?? a.changedTouches[0]
+    if (t) {
+      x = t.clientX
+      y = t.clientY
+    }
+  }
+  if (x === null || y === null) return null
+  return { x: x + e.delta.x, y: y + e.delta.y }
 }
 
 /**
@@ -382,13 +425,95 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
     })
   }
 
+  /**
+   * Update the in-flight preview while a dock launch tile is being
+   * dragged over the dashboard. Inserts a virtual 1×1 slot for the
+   * dock item into `previewOrder` at the cursor's resolved insertion
+   * index, so the rendered grid parts to make room exactly where the
+   * drop will land (and the FLIP layer animates the displacement).
+   *
+   * When the cursor leaves the dashboard, we clear the preview so
+   * neighbours snap back. The last resolved index is stashed on the
+   * meta for hysteresis and survives leaving / re-entering the grid.
+   */
+  function handleDockMoveOverDashboard(
+    e: DragMoveEvent,
+    meta: Extract<DragMeta, { kind: "dock-move" }>,
+    geometry: GridGeometry,
+  ) {
+    const overDashboard =
+      e.over?.id === DASHBOARD_DROPPABLE_ID
+    if (!overDashboard) {
+      // Pointer is off the grid — clear any standing preview so the
+      // dashboard reflows back to its committed order.
+      setActiveDrag((prev) => {
+        if (!prev) return prev
+        if (
+          prev.insertionIndex === undefined &&
+          prev.previewOrder === undefined
+        ) {
+          return prev
+        }
+        return {
+          ...prev,
+          insertionIndex: undefined,
+          previewOrder: undefined,
+        }
+      })
+      return
+    }
+
+    const cursor = cursorFromEvent(e)
+    if (!cursor) return
+    const cell = pointerToCell(cursor, {
+      originRect: geometry.getOriginRect(),
+      cellSize: geometry.cellSize,
+      gap: geometry.gap,
+    })
+    const anchor = clampToGrid(
+      { col: cell.col, row: cell.row, w: 1, h: 1 },
+      geometry.cols,
+    )
+    const order = usePlacement.getState().dashboardOrder
+    const item = usePlacement.getState().dock.find((p) => p.id === meta.rawId)
+    if (!item) return
+
+    const virtualSlot: DashboardSlot = {
+      kind: "pinned",
+      pinned: item,
+      size: { w: 1, h: 1 },
+    }
+    const insertionIndex = indexForInsertion(
+      order,
+      virtualSlot,
+      { col: anchor.col, row: anchor.row },
+      geometry.cols,
+      { stickyIndex: meta.lastDashboardIndex },
+    )
+
+    if (insertionIndex === meta.lastDashboardIndex) return
+    meta.lastDashboardIndex = insertionIndex
+    const previewOrder = [
+      ...order.slice(0, insertionIndex),
+      virtualSlot,
+      ...order.slice(insertionIndex),
+    ]
+    setActiveDrag((prev) =>
+      prev ? { ...prev, insertionIndex, previewOrder } : prev,
+    )
+  }
+
   function handleDragMove(e: DragMoveEvent) {
     const meta = dragMetaRef.current
     if (!meta) return
-    if (meta.kind === "dock-move") return
 
     const geometry = getActiveGridGeometry()
     if (!geometry) return
+
+    if (meta.kind === "dock-move") {
+      handleDockMoveOverDashboard(e, meta, geometry)
+      return
+    }
 
     const deltaCol = deltaToCells(e.delta.x, geometry)
     const deltaRow = deltaToCells(e.delta.y, geometry)
@@ -523,11 +648,13 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
         return
       }
       if (a.kind === "dock") {
-        // Cross-surface dock → dashboard. v1 places at the first free
-        // cell (via setPlacement); the user can re-position from there.
-        // Step 5 will route this through the live insertion index.
+        // Cross-surface dock → dashboard lands at the live insertion
+        // index resolved in handleDragMove (or the end of the order
+        // if the cursor never crossed over the grid before drop, e.g.
+        // a quick straight-line release). setPlacement materialises
+        // the slot atomically at the resolved index.
         const item = usePlacement.getState().dock.find((p) => p.id === a.rawId)
-        if (item) setPlacement(item.action, "dashboard")
+        if (item) setPlacement(item.action, "dashboard", undefined, insertionIndex)
         return
       }
       return

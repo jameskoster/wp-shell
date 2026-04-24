@@ -171,6 +171,48 @@ export function indexForAnchor<T extends { size: CellSize }>(
 }
 
 /**
+ * Resolve a target cell anchor to an insertion index for a NEW item
+ * not yet present in `order` (e.g. a dock item being dragged onto the
+ * dashboard for the first time). Conceptually identical to
+ * `indexForAnchor` but inserts a hypothetical slot at each candidate
+ * index `0..order.length` (inclusive — appending is a valid index).
+ *
+ * `stickyIndex` and `stickyBias` add hysteresis the same way as
+ * `indexForAnchor`. Initial drags into an empty grid trivially
+ * resolve to 0.
+ */
+export function indexForInsertion<T extends { size: CellSize }>(
+  order: T[],
+  newItem: { size: CellSize },
+  anchor: { col: number; row: number },
+  cols: number,
+  options?: { stickyIndex?: number; stickyBias?: number },
+): number {
+  if (order.length === 0) return 0
+  const stickyIndex = options?.stickyIndex
+  const stickyBias = options?.stickyBias ?? 0.5
+  let bestIndex = order.length
+  let bestScore = Infinity
+  for (let i = 0; i <= order.length; i++) {
+    const trial = [
+      ...order.slice(0, i),
+      newItem as unknown as T,
+      ...order.slice(i),
+    ]
+    const packed = pack(trial, cols)
+    const rect = packed[i].rect
+    let score =
+      Math.abs(rect.col - anchor.col) + Math.abs(rect.row - anchor.row)
+    if (stickyIndex !== undefined && i === stickyIndex) score -= stickyBias
+    if (score < bestScore) {
+      bestScore = score
+      bestIndex = i
+    }
+  }
+  return bestIndex
+}
+
+/**
  * Splice helper: move `from` to `to` in a new array. Returns the
  * input reference unchanged when the move is a no-op so callers can
  * short-circuit equality checks.
