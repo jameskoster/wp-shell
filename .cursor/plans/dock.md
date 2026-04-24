@@ -29,7 +29,7 @@ Promote the nav widget out of the dashboard `WidgetGrid` and into a standalone, 
 | Surface | New shell component `Dock`, mounted as a sibling to `AdminBar` inside `Shell`. Floats over content (`fixed`). |
 | Layout coordination | Dock publishes `--dock-inset-{left,right,bottom}` CSS variables on `<html>`. The Dashboard grid consumes them as padding so corner widgets aren't obscured. Workflow contexts continue to render full‑bleed. |
 | Position store | New `useDock` Zustand store, persisted to `localStorage("wp-shell.dock-position")`. Default `bottom-center`. |
-| Position picker | `Dock position` submenu in the AdminBar site menu (replaces the disabled "Customize dashboard" item). Radio items: `Left`, `Bottom`, `Right`, separator, `Hidden`. |
+| Dock controls | `Dock` submenu in the AdminBar site menu, containing two nested submenus: `Size` (`Small` / `Medium` / `Large`, mapping to `size-9` / `size-11` / `size-14` buttons) and `Position` (`Left`, `Bottom`, `Right`, separator, `Hidden`). |
 | Item source | Pull from the active recipe's `nav` widgets (`recipe.widgets.filter(kind === "nav").flatMap(items)`). |
 | Removal behavior | Drop nav widgets from the grid entirely (`Dashboard` filters `kind !== "nav"`). The dock is the canonical surface. |
 | Overflow | Static per‑orientation cap. Surplus items collapse into a trailing `…` button that opens a `Popover` listing the remainder. No scroll inside the dock. |
@@ -49,13 +49,19 @@ export type DockPosition =
   | "right-center"
   | "hidden"
 
-type State = { position: DockPosition }
-type Actions = { setPosition: (p: DockPosition) => void }
+export type DockSize = "sm" | "md" | "lg"
+
+type State = { position: DockPosition; size: DockSize }
+type Actions = {
+  setPosition: (p: DockPosition) => void
+  setSize: (s: DockSize) => void
+}
 
 // Persisted to localStorage("wp-shell.dock-position"), default "bottom-center".
+// Size persisted to localStorage("wp-shell.dock-size"), default "sm".
 ```
 
-`hidden` is a real value of `DockPosition` rather than a separate flag, so the AdminBar radio group has a single source of truth.
+`hidden` is a real value of `DockPosition` rather than a separate flag, so the AdminBar radio group has a single source of truth. `size` is persisted independently so position and size changes don't clobber each other.
 
 ---
 
@@ -118,22 +124,47 @@ Dynamic measurement of "what fits" is a possible follow‑up.
 
 ## Site menu integration
 
-In `AdminBar.tsx`, replace the disabled "Customize dashboard" item with:
+In `AdminBar.tsx`, the `Dock` submenu nests two further submenus — `Size` and `Position` — each driven by its own `MenuRadioGroup`:
 
 ```tsx
 <MenuSub>
-  <MenuSubTrigger>Dock position</MenuSubTrigger>
+  <MenuSubTrigger>Dock</MenuSubTrigger>
   <MenuSubPopup className="min-w-44">
-    <MenuRadioGroup value={position} onValueChange={setPosition}>
-      <MenuRadioItem value="left-center">Left</MenuRadioItem>
-      <MenuRadioItem value="bottom-center">Bottom</MenuRadioItem>
-      <MenuRadioItem value="right-center">Right</MenuRadioItem>
-      <MenuSeparator />
-      <MenuRadioItem value="hidden">Hidden</MenuRadioItem>
-    </MenuRadioGroup>
+    <MenuSub>
+      <MenuSubTrigger>Size</MenuSubTrigger>
+      <MenuSubPopup className="min-w-36">
+        <MenuRadioGroup value={size} onValueChange={setSize}>
+          <MenuRadioItem value="sm">Small</MenuRadioItem>
+          <MenuRadioItem value="md">Medium</MenuRadioItem>
+          <MenuRadioItem value="lg">Large</MenuRadioItem>
+        </MenuRadioGroup>
+      </MenuSubPopup>
+    </MenuSub>
+    <MenuSub>
+      <MenuSubTrigger>Position</MenuSubTrigger>
+      <MenuSubPopup className="min-w-44">
+        <MenuRadioGroup value={position} onValueChange={setPosition}>
+          <MenuRadioItem value="left-center">Left</MenuRadioItem>
+          <MenuRadioItem value="bottom-center">Bottom</MenuRadioItem>
+          <MenuRadioItem value="right-center">Right</MenuRadioItem>
+          <MenuSeparator />
+          <MenuRadioItem value="hidden">Hidden</MenuRadioItem>
+        </MenuRadioGroup>
+      </MenuSubPopup>
+    </MenuSub>
   </MenuSubPopup>
 </MenuSub>
 ```
+
+Size presets map to button dimensions (icons scale alongside the button):
+
+| Preset | Button | Icon |
+|---|---|---|
+| `sm` (default) | `size-9` (36px) | `size-4` |
+| `md` | `size-11` (44px) | `size-5` |
+| `lg` | `size-14` (56px) | `size-6` |
+
+The existing `ResizeObserver` on the dock pill re-publishes `--dock-inset-*` whenever the size changes, so dashboard padding follows automatically.
 
 If `@/components/ui/menu` doesn't already wrap Base UI's radio primitives, add `MenuRadioGroup` / `MenuRadioItem` wrappers. Confirm during step 1.
 

@@ -19,6 +19,7 @@ import {
   renderWidget,
 } from "@/widgets/WidgetGrid"
 import { renderDockButton } from "./Dock"
+import { useDock } from "./dockStore"
 import type { DashboardSlot, GridRect, WidgetDef } from "@/widgets/types"
 import {
   clampToGrid,
@@ -576,12 +577,21 @@ function DragPreview({ info }: { info: DragInfo }) {
       </div>
     )
   }
-  // Dock item — render at its intrinsic size-9. Use bottom-center so
-  // the badge sits in its conventional top-right corner; the overlay
+  // Dock item — render at the user's current dock size. Use bottom-center
+  // so the badge sits in its conventional top-right corner; the overlay
   // floats free of any specific dock edge.
+  return <DockItemDragPreview item={info.preview.item} />
+}
+
+function DockItemDragPreview({
+  item,
+}: {
+  item: Parameters<typeof renderDockButton>[0]
+}) {
+  const size = useDock((s) => s.size)
   return (
     <div className="rounded-lg cursor-grabbing shadow-2xl ring-1 ring-border bg-card">
-      {renderDockButton(info.preview.item, false, false, "bottom-center", () => {})}
+      {renderDockButton(item, false, false, "bottom-center", size, () => {})}
     </div>
   )
 }

@@ -37,7 +37,7 @@ import {
   useActiveDrag,
 } from "./CustomizeDnd"
 import { useCustomize } from "./customizeStore"
-import { useDock, type DockPosition } from "./dockStore"
+import { useDock, type DockPosition, type DockSize } from "./dockStore"
 import { useUI } from "./uiStore"
 
 type Orientation = "horizontal" | "vertical"
@@ -113,6 +113,18 @@ function badgeClassesFor(position: DockPosition): string {
   }
 }
 
+const BUTTON_SIZE_CLASSES: Record<DockSize, string> = {
+  sm: "size-9",
+  md: "size-11",
+  lg: "size-14",
+}
+
+const ICON_SIZE_CLASSES: Record<DockSize, string> = {
+  sm: "size-4",
+  md: "size-5",
+  lg: "size-6",
+}
+
 /**
  * Build the "is this ref currently open?" key. Mirrors the dedupe logic
  * in `useContexts.open`: defaults are applied to bare refs, then the
@@ -138,6 +150,7 @@ export function renderDockButton(
   isOpen: boolean,
   isActive: boolean,
   position: DockPosition,
+  size: DockSize,
   onActivate: (rect: DOMRect) => void,
 ) {
   const Icon = item.icon
@@ -156,13 +169,14 @@ export function renderDockButton(
       aria-label={item.title}
       aria-pressed={isActive}
       className={cn(
-        "relative flex size-9 shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+        "relative flex shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+        BUTTON_SIZE_CLASSES[size],
         isActive
           ? "bg-accent text-accent-foreground"
           : "hover:bg-accent/60 focus-visible:bg-accent/60",
       )}
     >
-      {Icon ? <Icon className="size-4" /> : null}
+      {Icon ? <Icon className={ICON_SIZE_CLASSES[size]} /> : null}
       {isOpen ? (
         <span
           aria-hidden
@@ -229,12 +243,14 @@ function SortableDockItem({
   isOpen,
   isActive,
   position,
+  size,
   index,
 }: {
   item: PinnedItem
   isOpen: boolean
   isActive: boolean
   position: DockPosition
+  size: DockSize
   index: number
 }) {
   const {
@@ -272,7 +288,7 @@ function SortableDockItem({
         )}
       >
         <div inert>
-          {renderDockButton(item, isOpen, isActive, position, () => {})}
+          {renderDockButton(item, isOpen, isActive, position, size, () => {})}
         </div>
       </div>
     </div>
@@ -281,6 +297,7 @@ function SortableDockItem({
 
 export function Dock() {
   const stored = useDock((s) => s.position)
+  const size = useDock((s) => s.size)
   const isMobile = useIsMobile()
   const switcherOpen = useUI((s) => s.overlay === "switcher")
   const customizing = useCustomize((s) => s.active)
@@ -361,7 +378,7 @@ export function Dock() {
       ro.disconnect()
       reset()
     }
-  }, [position, items.length])
+  }, [position, size, items.length])
 
   // Reset on unmount as a safety net (e.g. dev hot-reload swaps).
   useEffect(
@@ -409,6 +426,7 @@ export function Dock() {
         containerRef={containerRef}
         orientation={orientation}
         position={position}
+        size={size}
         tooltipSide={tooltipSide}
         items={items}
         openKeys={openKeys}
@@ -429,6 +447,7 @@ function CustomizeAwareContainer({
   containerRef,
   orientation,
   position,
+  size,
   tooltipSide,
   items,
   openKeys,
@@ -439,6 +458,7 @@ function CustomizeAwareContainer({
   containerRef: React.RefObject<HTMLDivElement | null>
   orientation: Orientation
   position: DockPosition
+  size: DockSize
   tooltipSide: ReturnType<typeof tooltipSideFor>
   items: PinnedItem[]
   openKeys: Set<string>
@@ -483,6 +503,7 @@ function CustomizeAwareContainer({
               isOpen={isOpen}
               isActive={isActive}
               position={position}
+              size={size}
               index={i}
             />
           )
@@ -491,8 +512,13 @@ function CustomizeAwareContainer({
           <DockItemContextMenu key={item.id} item={item}>
             <Tooltip>
               <TooltipTrigger
-                render={renderDockButton(item, isOpen, isActive, position, (rect) =>
-                  onActivate(item.action, rect),
+                render={renderDockButton(
+                  item,
+                  isOpen,
+                  isActive,
+                  position,
+                  size,
+                  (rect) => onActivate(item.action, rect),
                 )}
               />
               <TooltipPopup side={tooltipSide} sideOffset={8}>

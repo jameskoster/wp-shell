@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/sheet"
 import { useCanCustomize, useCustomize } from "./customizeStore"
 import { goHomeFromActive } from "./goHomeFromActive"
-import { useDock, type DockPosition } from "./dockStore"
+import { useDock, type DockPosition, type DockSize } from "./dockStore"
 import { useUI } from "./uiStore"
 import {
   useActiveContext,
@@ -68,6 +68,8 @@ export function AdminBar() {
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length
   const dockPosition = useDock((s) => s.position)
   const setDockPosition = useDock((s) => s.setPosition)
+  const dockSize = useDock((s) => s.size)
+  const setDockSize = useDock((s) => s.setSize)
   const customizing = useCustomize((s) => s.active)
   const setCustomizing = useCustomize((s) => s.setActive)
   const canCustomize = useCanCustomize()
@@ -268,20 +270,40 @@ export function AdminBar() {
             Customize Dashboard
           </MenuItem>
           <MenuSub>
-            <MenuSubTrigger>Dock position</MenuSubTrigger>
+            <MenuSubTrigger>Dock</MenuSubTrigger>
             <MenuSubPopup className="min-w-44">
-              <MenuRadioGroup
-                value={dockPosition}
-                onValueChange={(value) =>
-                  setDockPosition(value as DockPosition)
-                }
-              >
-                <MenuRadioItem value="left-center">Left</MenuRadioItem>
-                <MenuRadioItem value="bottom-center">Bottom</MenuRadioItem>
-                <MenuRadioItem value="right-center">Right</MenuRadioItem>
-                <MenuSeparator />
-                <MenuRadioItem value="hidden">Hidden</MenuRadioItem>
-              </MenuRadioGroup>
+              <MenuSub>
+                <MenuSubTrigger>Size</MenuSubTrigger>
+                <MenuSubPopup className="min-w-36">
+                  <MenuRadioGroup
+                    value={dockSize}
+                    onValueChange={(value) =>
+                      setDockSize(value as DockSize)
+                    }
+                  >
+                    <MenuRadioItem value="sm">Small</MenuRadioItem>
+                    <MenuRadioItem value="md">Medium</MenuRadioItem>
+                    <MenuRadioItem value="lg">Large</MenuRadioItem>
+                  </MenuRadioGroup>
+                </MenuSubPopup>
+              </MenuSub>
+              <MenuSub>
+                <MenuSubTrigger>Position</MenuSubTrigger>
+                <MenuSubPopup className="min-w-44">
+                  <MenuRadioGroup
+                    value={dockPosition}
+                    onValueChange={(value) =>
+                      setDockPosition(value as DockPosition)
+                    }
+                  >
+                    <MenuRadioItem value="left-center">Left</MenuRadioItem>
+                    <MenuRadioItem value="bottom-center">Bottom</MenuRadioItem>
+                    <MenuRadioItem value="right-center">Right</MenuRadioItem>
+                    <MenuSeparator />
+                    <MenuRadioItem value="hidden">Hidden</MenuRadioItem>
+                  </MenuRadioGroup>
+                </MenuSubPopup>
+              </MenuSub>
             </MenuSubPopup>
           </MenuSub>
           <MenuSeparator />
