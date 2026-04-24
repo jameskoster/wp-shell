@@ -63,6 +63,15 @@ export function ContextStage() {
   const [scrolling, setScrolling] = useState(false)
   const scrollTimer = useRef<number | null>(null)
 
+  // Tracks which tile (if any) should sit pinned at full-screen identity
+  // behind a launching tile. Without it, switching from one active context
+  // to another lets the prior tile slide off to PARK while the new tile is
+  // still mid-launch (small, anchored at the dock rect) — leaving a brief
+  // window where the dashboard shows through between them. Pinning the
+  // outgoing tile at identity until the launch lands keeps the new tile
+  // visually "on top of" the existing one.
+  const [coveringId, setCoveringId] = useState<string | null>(null)
+
   // pendingLaunch lives in the store and is overwritten (or cleared to null)
   // by the next open() call. We don't proactively consume it: the tile
   // gates re-fires on launchSeq, so a stale value sitting in the store is
@@ -71,6 +80,18 @@ export function ContextStage() {
   const pendingLaunch = useContexts((s) => s.pendingLaunch)
   const pendingHome = useContexts((s) => s.pendingHome)
   const loopSwap = useContexts((s) => s.loopSwap)
+
+  // Mirror of `active.id` from the previous render. Captured during render
+  // (rather than via useEffect) because we need yesterday's value while
+  // the launchSeq effect runs synchronously after the commit that already
+  // wrote the new active.
+  const lastActiveIdRef = useRef<string | null>(null)
+  const prevActiveIdRef = useRef<string | null>(null)
+  const currentActiveId = active?.id ?? null
+  if (lastActiveIdRef.current !== currentActiveId) {
+    prevActiveIdRef.current = lastActiveIdRef.current
+    lastActiveIdRef.current = currentActiveId
+  }
 
   useEffect(() => {
     const el = stageRef.current
@@ -103,6 +124,30 @@ export function ContextStage() {
       setScrolling(false)
     }
   }, [switcherOpen])
+
+  // Arm the cover when a launch fires while another context was active.
+  // Held just long enough to span the launch animation (300ms; matched to
+  // ContextTile's transitionDuration in the launch case), then released
+  // so the outgoing tile can complete its slide to PARK behind the
+  // already-landed new active. Reduced motion skips the launch animation
+  // entirely, so the cover is unnecessary there.
+  useEffect(() => {
+    if (!pendingLaunch) return
+    if (typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const prev = prevActiveIdRef.current
+    if (!prev || prev === pendingLaunch.id) return
+    setCoveringId(prev)
+    const t = window.setTimeout(() => setCoveringId(null), 320)
+    return () => {
+      window.clearTimeout(t)
+      setCoveringId(null)
+    }
+    // Re-arm only on a new launch event (signalled by pendingLaunch.seq
+    // changing); a re-rendered identical pendingLaunch object should not
+    // restart the timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLaunch?.seq])
 
   // The home animation leaves `pendingHome` parked in its 'done' phase so
   // the surface stays invisible at the launch tile rect (instead of
@@ -280,11 +325,14 @@ export function ContextStage() {
         const loopSwapPhase = loopSwapRole ? loopSwap!.phase : null
         const loopSwapSeq = loopSwapRole ? loopSwap!.seq : null
 
+        const isCovering = ctx.id === coveringId && !isActive
+
         return (
           <ContextTile
             key={ctx.id}
             ctx={ctx}
             isActive={isActive}
+            isCovering={isCovering}
             switcherOpen={switcherOpen}
             cell={cell}
             stageW={stageRect.w}

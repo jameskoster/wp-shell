@@ -7,6 +7,12 @@ import type { Cell } from "./stageLayout"
 type Props = {
   ctx: Context
   isActive: boolean
+  // While another tile is in the middle of its launch animation, the
+  // outgoing (previously-active) tile is held at full-screen identity so
+  // the new tile visually grows on top of it instead of revealing the
+  // dashboard underneath. Cleared once the launch lands, after which the
+  // tile makes its normal slide to PARK.
+  isCovering?: boolean
   switcherOpen: boolean
   cell: Cell | undefined
   // Stage size in px — used to express "full screen" as numeric width/height
@@ -60,6 +66,7 @@ function prefersReducedMotion(): boolean {
 export function ContextTile({
   ctx,
   isActive,
+  isCovering = false,
   switcherOpen,
   cell,
   stageW,
@@ -182,6 +189,11 @@ export function ContextTile({
     surfaceTransform = `translate3d(${cell.x}px, ${cell.y}px, 0) scale(${cell.scale})`
   } else if (isActive) {
     surfaceTransform = "translate3d(0px, 0px, 0) scale(1)"
+  } else if (isCovering) {
+    // Hold full-screen identity behind the launching tile. Same pose as
+    // when this tile *was* active, so no transition fires when the
+    // active flag flips off — the tile just stays put under the new one.
+    surfaceTransform = "translate3d(0px, 0px, 0) scale(1)"
   } else if (cell) {
     surfaceTransform = `translate3d(${PARK}px, ${cell.y}px, 0) scale(${cell.scale})`
   } else {
@@ -220,7 +232,8 @@ export function ContextTile({
 
   const inLoopSwap = !!loopSwapRole
   const isHoming = !!homeTransform
-  const surfaceVisible = switcherOpen || isActive || inLoopSwap || isHoming
+  const surfaceVisible =
+    switcherOpen || isActive || inLoopSwap || isHoming || isCovering
 
   // Single transition spec used by both surface and chrome so they stay in
   // lock-step. Disabled during scroll (direct wheel input) and during the
@@ -286,6 +299,11 @@ export function ContextTile({
     // open and close motions look like the same shape played in reverse.
     surfaceBorderRadius = 0
   } else if (isActive && !switcherOpen) {
+    surfaceBorderRadius = 0
+  } else if (isCovering) {
+    // Pinned at identity behind the launching tile, so radius matches
+    // the active full-screen pose to keep the corners square while the
+    // new tile lands on top.
     surfaceBorderRadius = 0
   } else if (cell) {
     surfaceBorderRadius = 8 / cell.scale

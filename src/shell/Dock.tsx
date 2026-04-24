@@ -132,6 +132,7 @@ function openKeyFor(ref: ContextRef): string | null {
 function renderDockButton(
   item: PinnedItem,
   isOpen: boolean,
+  isActive: boolean,
   position: DockPosition,
   onActivate: (rect: DOMRect) => void,
 ) {
@@ -140,9 +141,22 @@ function renderDockButton(
     <button
       type="button"
       data-launch-key={launchKey(item.action)}
-      onClick={(e) => onActivate(e.currentTarget.getBoundingClientRect())}
+      // Re-clicking the already-active context is a no-op: the surface is
+      // already on screen, so replaying the launch animation would just
+      // be visual noise. `aria-pressed` advertises the toggle-like state
+      // for assistive tech.
+      onClick={(e) => {
+        if (isActive) return
+        onActivate(e.currentTarget.getBoundingClientRect())
+      }}
       aria-label={item.title}
-      className="relative flex size-9 shrink-0 items-center justify-center rounded-lg outline-none transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+      aria-pressed={isActive}
+      className={cn(
+        "relative flex size-9 shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+        isActive
+          ? "bg-accent text-accent-foreground"
+          : "hover:bg-accent/60 focus-visible:bg-accent/60",
+      )}
     >
       {Icon ? <Icon className="size-4" /> : null}
       {isOpen ? (
@@ -209,11 +223,13 @@ function DockItemContextMenu({
 function SortableDockItem({
   item,
   isOpen,
+  isActive,
   position,
   index,
 }: {
   item: PinnedItem
   isOpen: boolean
+  isActive: boolean
   position: DockPosition
   index: number
 }) {
@@ -246,7 +262,7 @@ function SortableDockItem({
       {...listeners}
     >
       <div inert>
-        {renderDockButton(item, isOpen, position, () => {})}
+        {renderDockButton(item, isOpen, isActive, position, () => {})}
       </div>
     </div>
   )
@@ -259,6 +275,7 @@ export function Dock() {
   const customizing = useCustomize((s) => s.active)
   const open = useContexts((s) => s.open)
   const openContexts = useContexts((s) => s.openContexts)
+  const activeId = useContexts((s) => s.activeId)
 
   const position = effectivePosition(stored, isMobile)
   const orientation = orientationFor(position)
@@ -274,6 +291,16 @@ export function Dock() {
     }
     return set
   }, [openContexts])
+
+  // Singleton key of the currently-active context, if any. Used to give
+  // the matching dock item an "active" treatment and turn its click into
+  // a no-op (re-launching the already-on-screen surface is just noise).
+  const activeKey = useMemo(() => {
+    if (!activeId) return null
+    const ctx = openContexts.find((c) => c.id === activeId)
+    if (!ctx) return null
+    return openKeyFor({ type: ctx.type, params: ctx.params })
+  }, [activeId, openContexts])
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -374,6 +401,7 @@ export function Dock() {
         tooltipSide={tooltipSide}
         items={items}
         openKeys={openKeys}
+        activeKey={activeKey}
         customizing={customizing}
         onActivate={open}
       />
@@ -393,6 +421,7 @@ function CustomizeAwareContainer({
   tooltipSide,
   items,
   openKeys,
+  activeKey,
   customizing,
   onActivate,
 }: {
@@ -402,6 +431,7 @@ function CustomizeAwareContainer({
   tooltipSide: ReturnType<typeof tooltipSideFor>
   items: PinnedItem[]
   openKeys: Set<string>
+  activeKey: string | null
   customizing: boolean
   onActivate: (
     ref: ContextRef,
@@ -433,12 +463,14 @@ function CustomizeAwareContainer({
       {items.map((item, i) => {
         const key = openKeyFor(item.action)
         const isOpen = key ? openKeys.has(key) : false
+        const isActive = key !== null && key === activeKey
         if (customizing) {
           return (
             <SortableDockItem
               key={item.id}
               item={item}
               isOpen={isOpen}
+              isActive={isActive}
               position={position}
               index={i}
             />
@@ -448,7 +480,7 @@ function CustomizeAwareContainer({
           <DockItemContextMenu key={item.id} item={item}>
             <Tooltip>
               <TooltipTrigger
-                render={renderDockButton(item, isOpen, position, (rect) =>
+                render={renderDockButton(item, isOpen, isActive, position, (rect) =>
                   onActivate(item.action, rect),
                 )}
               />
