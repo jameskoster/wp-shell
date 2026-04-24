@@ -313,7 +313,10 @@
 
 /* iOS-style widget grid: container queries keep each cell perfectly square
    (row height == column width) at every viewport, regardless of any
-   surrounding layout. Cell count steps with breakpoints. */
+   surrounding layout. Cell count steps with breakpoints. Children carry
+   explicit `grid-column` / `grid-row` placement (canonical-grid model);
+   `grid-auto-flow: dense` only matters as a safety net for items that
+   accidentally fall through without explicit positioning. */
 .widget-grid {
     container-type: inline-size;
     display: grid;
@@ -321,6 +324,8 @@
     --cols: 4;
     grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
     grid-auto-rows: calc((100cqi - (var(--cols) - 1) * 1rem) / var(--cols));
+    grid-auto-flow: row dense;
+    position: relative;
 }
 @media (min-width: 640px) {
     .widget-grid { --cols: 6; }

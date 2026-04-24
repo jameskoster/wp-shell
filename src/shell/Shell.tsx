@@ -5,7 +5,7 @@ import { ContextSwitcher } from "./ContextSwitcher"
 import { ContextStage } from "./ContextStage"
 import { CustomizeDnd } from "./CustomizeDnd"
 import { Dock } from "./Dock"
-import { useCustomize } from "./customizeStore"
+import { useCanCustomize, useCustomize } from "./customizeStore"
 import { useShortcuts } from "./useShortcuts"
 import { useUI } from "./uiStore"
 import {
@@ -24,11 +24,21 @@ export function Shell() {
   const closeOverlay = useUI((s) => s.close)
   const customizing = useCustomize((s) => s.active)
   const setCustomizing = useCustomize((s) => s.setActive)
+  const canCustomize = useCanCustomize()
 
   useEffect(() => {
     hydrate()
     return bindHashListener()
   }, [hydrate])
+
+  // Auto-exit customize if the viewport shrinks below the supported
+  // breakpoint (e.g. user resized the window or rotated a tablet).
+  // Same idea as the existing context-switch / overlay auto-exit a few
+  // lines down: customize mode is an editing posture that only makes
+  // sense at widths the free-form grid is designed for.
+  useEffect(() => {
+    if (customizing && !canCustomize) setCustomizing(false)
+  }, [customizing, canCustomize, setCustomizing])
 
   useEffect(() => {
     document.title = active
@@ -100,42 +110,48 @@ export function Shell() {
       >
         Skip to content
       </a>
-      <div
-        className="relative shrink-0"
-        onClick={handleDimmedClick}
-        role={dimmed ? "button" : undefined}
-        aria-label={
-          switcherOpen
-            ? "Go to Dashboard"
-            : customizing
-              ? "Exit customize mode"
-              : undefined
-        }
-      >
-        <div
-          className={`motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
-            dimmed
-              ? "pointer-events-none opacity-40 blur-sm"
-              : "opacity-100 blur-0"
-          }`}
-          aria-hidden={dimmed}
-          inert={dimmed}
-        >
-          <AdminBar />
-        </div>
-        {/*
-          Customize toolbar overlays the admin bar slot so entering /
-          exiting customize mode doesn't shift the page vertically.
-          Mounted only while active so its sortable/droppable wiring
-          isn't paying the cost when idle.
-        */}
-        {customizing ? (
-          <div className="absolute inset-0 z-10">
-            <CustomizeBar />
-          </div>
-        ) : null}
-      </div>
+      {/*
+        CustomizeDnd wraps the admin bar slot too, not just the dashboard
+        + dock, because the CustomizeBar's "Drop here to remove" target
+        registers a `useDroppable` and reads `useActiveDrag()` — both of
+        which need a DndContext + DragInfoContext ancestor to function.
+      */}
       <CustomizeDnd>
+        <div
+          className="relative shrink-0"
+          onClick={handleDimmedClick}
+          role={dimmed ? "button" : undefined}
+          aria-label={
+            switcherOpen
+              ? "Go to Dashboard"
+              : customizing
+                ? "Exit customize mode"
+                : undefined
+          }
+        >
+          <div
+            className={`motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide ${
+              dimmed
+                ? "pointer-events-none opacity-40 blur-sm"
+                : "opacity-100 blur-0"
+            }`}
+            aria-hidden={dimmed}
+            inert={dimmed}
+          >
+            <AdminBar />
+          </div>
+          {/*
+            Customize toolbar overlays the admin bar slot so entering /
+            exiting customize mode doesn't shift the page vertically.
+            Mounted only while active so its sortable/droppable wiring
+            isn't paying the cost when idle.
+          */}
+          {customizing ? (
+            <div className="absolute inset-0 z-10">
+              <CustomizeBar />
+            </div>
+          ) : null}
+        </div>
         <main
           id="main"
           aria-label={active ? active.title : "Dashboard"}

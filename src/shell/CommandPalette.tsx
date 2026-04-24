@@ -17,7 +17,7 @@ import {
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Badge } from "@/components/ui/badge"
 import { useUI } from "./uiStore"
-import { useCustomize } from "./customizeStore"
+import { useCanCustomize, useCustomize } from "./customizeStore"
 import { goHomeFromActive } from "./goHomeFromActive"
 import { useActiveContext, useClosedRecents, useContexts } from "@/contexts/store"
 import { DESTINATIONS, metaFor } from "@/contexts/registry"
@@ -44,6 +44,7 @@ export function CommandPalette() {
   const recents = useClosedRecents()
   const setCustomizing = useCustomize((s) => s.setActive)
   const customizing = useCustomize((s) => s.active)
+  const canCustomize = useCanCustomize()
   const activeContext = useActiveContext()
   const dashboardActive = activeContext === null
 
@@ -54,7 +55,7 @@ export function CommandPalette() {
   // context first — invoking "Customize Dashboard" from a context is a
   // statement of intent that we shouldn't make the user satisfy by
   // navigating home themselves.
-  if (!customizing) {
+  if (!customizing && canCustomize) {
     groups.push({
       value: "actions",
       label: "Actions",

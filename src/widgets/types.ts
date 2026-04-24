@@ -92,22 +92,32 @@ export type PinnedItem = {
 }
 
 /**
- * Ordered entry in the dashboard grid. A slot is either:
+ * Position + size on the canonical 12-column dashboard grid. Origin is
+ * top-left, all values are integer cell counts. The canonical width is
+ * always 12; smaller breakpoints reflow via `compact()` rather than
+ * storing per-breakpoint coordinates.
+ *
+ * Launch tiles are forced to `w: 1, h: 1`; non-launch widgets accept
+ * any `w: 1..12, h: 1..N`.
+ */
+export type GridRect = { col: number; row: number; w: number; h: number }
+
+/**
+ * Entry in the dashboard grid. A slot is either:
  *
  *  - `pinned`  — a launch tile pinned by the user (or seeded from a nav
  *    item with `defaultPlacement: "dashboard"`). The full PinnedItem is
  *    inlined so the slot is self-contained — no foreign-key drift if
  *    the pin's source data changes shape.
  *  - `recipe` — references a recipe widget by id (info, analytics, …).
- *    `sizeOverride` is reserved for a future per-widget resize gesture
- *    inside Customize mode and is not consumed yet.
  *
- * The `dashboardOrder` array on the placement store is the single source
- * of truth for both ordering AND inclusion: a recipe widget that's been
- * dismissed via the per-widget menu is absent from the array (and its id
- * is mirrored into `hiddenWidgetIds` so the Add widgets menu can offer
- * it back).
+ * Each slot owns a canonical `rect` (col/row/w/h on the 12-col grid).
+ * The placement store is the single source of truth; rendering reflows
+ * `rect` per breakpoint via `compact()`. A widget is on the dashboard
+ * iff it appears in `dashboardOrder`; recipe widgets dismissed via the
+ * per-widget menu are absent from the array AND mirrored in
+ * `hiddenWidgetIds` so the Add widgets menu can offer them back.
  */
 export type DashboardSlot =
-  | { kind: "pinned"; pinned: PinnedItem }
-  | { kind: "recipe"; widgetId: string; sizeOverride?: WidgetSize }
+  | { kind: "pinned"; pinned: PinnedItem; rect: GridRect }
+  | { kind: "recipe"; widgetId: string; rect: GridRect }

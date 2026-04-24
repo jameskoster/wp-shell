@@ -129,7 +129,11 @@ function openKeyFor(ref: ContextRef): string | null {
   return `${ref.type}:${key}`
 }
 
-function renderDockButton(
+/**
+ * Render a single dock button. Exported so the customize-mode
+ * `DragOverlay` can use the exact same JSX for the drag preview.
+ */
+export function renderDockButton(
   item: PinnedItem,
   isOpen: boolean,
   isActive: boolean,
@@ -246,23 +250,30 @@ function SortableDockItem({
     transform: CSS.Transform.toString(transform),
     transition,
   }
+  // Outer node owns the dnd-kit transform; inner node owns the jiggle
+  // animation. Same reasoning as `SortableWidget` — CSS animations
+  // override inline `transform` styles, so co-locating them on one
+  // node would silently clobber the reorder translate.
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "rounded-lg outline-none cursor-grab focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-        index % 2 === 0
-          ? "motion-safe:animate-jiggle-sm"
-          : "motion-safe:animate-jiggle-sm-alt",
-        isDragging && "z-10 cursor-grabbing opacity-50",
-      )}
+      className={cn(isDragging && "opacity-0")}
       aria-label={`Reposition ${item.title}`}
       {...attributes}
       {...listeners}
     >
-      <div inert>
-        {renderDockButton(item, isOpen, isActive, position, () => {})}
+      <div
+        className={cn(
+          "rounded-lg outline-none cursor-grab focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+          index % 2 === 0
+            ? "motion-safe:animate-jiggle-sm"
+            : "motion-safe:animate-jiggle-sm-alt",
+        )}
+      >
+        <div inert>
+          {renderDockButton(item, isOpen, isActive, position, () => {})}
+        </div>
       </div>
     </div>
   )

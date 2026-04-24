@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 /**
  * Customize Dashboard mode is a transient editing posture for the
@@ -24,3 +25,17 @@ export const useCustomize = create<State & Actions>((set, get) => ({
   setActive: (active) => set({ active }),
   toggle: () => set({ active: !get().active }),
 }))
+
+/**
+ * Customize mode requires at least the 6-column dashboard breakpoint
+ * (≥ 640px viewport). Below that, free-form positioning collapses into
+ * a near-single-column stream where moves and resizes don't have
+ * meaningful targets — so we hide the entry points and auto-exit if
+ * the viewport shrinks while a session is open.
+ *
+ * Mirrors the `--cols` step in `index.css` so the gate stays in sync
+ * with the layout's actual breakpoints.
+ */
+export function useCanCustomize(): boolean {
+  return useMediaQuery({ min: 640 })
+}

@@ -43,7 +43,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { useCustomize } from "./customizeStore"
+import { useCanCustomize, useCustomize } from "./customizeStore"
 import { goHomeFromActive } from "./goHomeFromActive"
 import { useDock, type DockPosition } from "./dockStore"
 import { useUI } from "./uiStore"
@@ -70,6 +70,7 @@ export function AdminBar() {
   const setDockPosition = useDock((s) => s.setPosition)
   const customizing = useCustomize((s) => s.active)
   const setCustomizing = useCustomize((s) => s.setActive)
+  const canCustomize = useCanCustomize()
 
   const handleGoHome = () => goHomeFromActive(active)
 
@@ -258,7 +259,7 @@ export function AdminBar() {
             // so the close-context choreography animates back to the
             // originating launch tile / dock item, matching what the
             // home button does.
-            disabled={customizing}
+            disabled={customizing || !canCustomize}
             onClick={() => {
               if (!dashboardActive) goHomeFromActive(active)
               setCustomizing(true)
