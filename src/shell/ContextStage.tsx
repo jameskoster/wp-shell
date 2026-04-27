@@ -197,16 +197,21 @@ export function ContextStage() {
   }, [switcherOpen, ordered.length])
 
   // Keyboard navigation: ArrowLeft = next older (i+1), ArrowRight = next
-  // newer (i-1). Snaps the focused tile into view.
+  // newer (i-1). Tiles render in stable DOM (openContexts) order but are
+  // visually positioned by focus rank, so we walk `ordered` to build the
+  // navigation list — that way `next` aligns with `layout.cells[next]` and
+  // arrow direction matches what's on screen.
   useEffect(() => {
     if (!switcherOpen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "ArrowUp" && e.key !== "ArrowDown") return
-      const tiles = Array.from(
-        document.querySelectorAll<HTMLButtonElement>(
-          "[data-context-tile-button]",
-        ),
-      )
+      const tiles = ordered
+        .map((c) =>
+          document.querySelector<HTMLButtonElement>(
+            `[data-context-tile-button][data-context-id="${c.id}"]`,
+          ),
+        )
+        .filter((b): b is HTMLButtonElement => b !== null)
       if (tiles.length === 0) return
       const currentIdx = tiles.findIndex((b) => b === document.activeElement)
       const delta = e.key === "ArrowLeft" || e.key === "ArrowDown" ? 1 : -1
@@ -229,7 +234,7 @@ export function ContextStage() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [switcherOpen, layout, size.w])
+  }, [switcherOpen, layout, size.w, ordered])
 
   // Compose effective cells (with current scroll applied).
   const effectiveCells = useMemo<Cell[]>(

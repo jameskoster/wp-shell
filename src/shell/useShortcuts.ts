@@ -31,7 +31,7 @@ export function useShortcuts() {
         return
       }
 
-      if (modKey(e) && !e.shiftKey && !e.altKey && e.key === "`") {
+      if (e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.key === "`") {
         e.preventDefault()
         toggle("switcher")
         return
@@ -43,8 +43,8 @@ export function useShortcuts() {
         return
       }
 
-      if (e.altKey && !modKey(e) && /^[1-9]$/.test(e.key) && !isEditableTarget(e)) {
-        const idx = Number(e.key) - 1
+      if (e.altKey && !modKey(e) && /^Digit[1-9]$/.test(e.code) && !isEditableTarget(e)) {
+        const idx = Number(e.code.slice(5)) - 1
         const target = focusOrder[idx]
         if (target) {
           e.preventDefault()
@@ -60,7 +60,7 @@ export function useShortcuts() {
 
 export const SHORTCUTS = {
   palette: { mac: "⌘K", other: "Ctrl+K" },
-  switcher: { mac: "⌘`", other: "Ctrl+`" },
+  switcher: { mac: "⌃`", other: "Ctrl+`" },
   jump: { mac: "⌥1–9", other: "Alt+1–9" },
 } as const
 

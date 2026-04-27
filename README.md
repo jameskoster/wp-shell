@@ -233,7 +233,7 @@ and stay live. Trade-offs:
 | Shortcut       | Action                              |
 | -------------- | ----------------------------------- |
 | `⌘K`           | Toggle command palette              |
-| `⌘\``          | Toggle Workspaces                   |
+| `⌃\``          | Toggle Workspaces                   |
 | `Alt+1…9`      | Jump to nth workspace (focus order) |
 | `Esc`          | Close any open overlay              |
 

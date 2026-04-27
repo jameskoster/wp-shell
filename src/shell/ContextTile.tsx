@@ -377,6 +377,7 @@ export function ContextTile({
         <button
           type="button"
           data-context-tile-button
+          data-context-id={ctx.id}
           onClick={onSelect}
           aria-label={`Switch to ${ctx.title}`}
           aria-current={isActive ? "true" : undefined}
