@@ -18,6 +18,7 @@ export const SIZE_TO_CELLS: Record<WidgetSize, CellSize> = {
   tall: { w: 1, h: 2 },
   md: { w: 2, h: 1 },
   lg: { w: 2, h: 2 },
+  wide: { w: 3, h: 2 },
   xl: { w: 4, h: 2 },
 }
 
@@ -32,7 +33,8 @@ export function rectToWidgetSize(rect: { w: number; h: number }): WidgetSize {
   if (rect.w <= 1 && rect.h <= 1) return "sm"
   if (rect.w <= 1) return "tall"
   if (rect.h <= 1) return "md"
-  if (rect.w >= 4 && rect.h >= 2) return "xl"
+  if (rect.w >= 4) return "xl"
+  if (rect.w >= 3) return "wide"
   return "lg"
 }
 

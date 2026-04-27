@@ -78,7 +78,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Recent orders",
       icon: ShoppingBag,
-      size: "xl",
+      size: "wide",
       items: [
         {
           id: "o1",
@@ -111,7 +111,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Low stock",
       icon: AlertTriangle,
-      size: "xl",
+      size: "wide",
       items: [
         {
           id: "s1",
@@ -144,7 +144,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "New reviews",
       icon: Star,
-      size: "xl",
+      size: "wide",
       items: [
         {
           id: "r1",
@@ -177,7 +177,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Recent activity",
       icon: Activity,
-      size: "xl",
+      size: "wide",
       items: [
         {
           id: "a1",
@@ -226,7 +226,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "WordPress Events and News",
       icon: CalendarDays,
-      size: "xl",
+      size: "wide",
       items: [
         {
           id: "e1",
@@ -259,7 +259,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Yoast SEO Posts Overview",
       icon: Search,
-      size: "xl",
+      size: "wide",
       items: [
         { id: "y1", title: "Posts with a good SEO score", meta: "24" },
         { id: "y2", title: "Posts that need improvement", meta: "9" },
@@ -298,7 +298,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Top posts & pages",
       icon: BarChart3,
-      size: "xl",
+      size: "wide",
       items: [
         {
           id: "t1",

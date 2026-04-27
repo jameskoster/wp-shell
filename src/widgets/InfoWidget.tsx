@@ -31,7 +31,7 @@ export function InfoWidget({
       : size === "md" || size === "tall"
         ? items.slice(0, 2)
         : items
-  const useScroll = size === "lg" || size === "xl"
+  const useScroll = size === "lg" || size === "wide" || size === "xl"
 
   return (
     <Card className="group h-full overflow-hidden">
@@ -125,9 +125,31 @@ function ItemBody({
 }: {
   item: NonNullable<InfoWidgetDef["items"]>[number]
 }) {
+  // Two layouts share this component:
+  //  - With a thumbnail, title sits over meta so the thumbnail anchors
+  //    against a 2-line text block (the canonical mail/messaging row).
+  //    A single-line title + side-meta next to a chunky 28px thumbnail
+  //    reads as misaligned because the thumbnail dominates vertically.
+  //  - Without a thumbnail, the row stays inline with meta floated to
+  //    the right — the original compact info-list shape.
+  if (item.thumbnail) {
+    return (
+      <>
+        <Thumbnail thumbnail={item.thumbnail} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm leading-tight">{item.title}</div>
+          {item.meta ? (
+            <div className="mt-0.5 truncate text-xs leading-tight text-muted-foreground">
+              {item.meta}
+            </div>
+          ) : null}
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
-      {item.thumbnail ? <Thumbnail thumbnail={item.thumbnail} /> : null}
       <span className="min-w-0 flex-1 truncate text-sm">{item.title}</span>
       {item.meta ? (
         <span className="shrink-0 text-xs text-muted-foreground">
