@@ -8,6 +8,7 @@ import {
   FileText,
   Globe,
   HeartPulse,
+  History,
   Image,
   LineChart,
   Megaphone,
@@ -26,9 +27,53 @@ import {
   Users,
   Wrench,
 } from "lucide-react"
+import { PAGES } from "@/mocks/pages"
 import { renderQuickDraft } from "@/widgets/QuickDraftForm"
 import { renderSiteHealth } from "@/widgets/SiteHealthMeter"
-import type { Recipe } from "@/widgets/types"
+import type { InfoListItem, Recipe } from "@/widgets/types"
+
+// Hand-picked from the PAGES mock to mix recent drafts and published
+// edits — "Jump back in" prioritises pages the author is actively working
+// on, with the most-recent first. Deriving the rendered items from PAGES
+// keeps title / status / modified in sync with the rest of the prototype.
+//
+// Each entry optionally carries a `seed` for the featured image; pages
+// without one fall back to the FileText icon thumbnail so the widget
+// shows both the populated state and the no-image-yet state.
+const RECENT_PAGES: Array<{ id: string; seed?: string }> = [
+  { id: "spring-collection", seed: "spring-collection-lookbook" },
+  { id: "home", seed: "homepage-hero" },
+  { id: "studio-update" },
+  { id: "about", seed: "studio-spring" },
+  { id: "shop", seed: "shop-hero" },
+  { id: "april-look", seed: "april-look-book" },
+  { id: "ceramics-restock" },
+  { id: "contact", seed: "contact-page" },
+]
+
+const jumpBackInItems: InfoListItem[] = RECENT_PAGES.flatMap(({ id, seed }) => {
+  const page = PAGES.find((p) => p.id === id)
+  if (!page) return []
+  // Drafts surface their status so the user can tell at a glance which
+  // entries are still in-progress; published edits just show the relative
+  // time to keep the row scannable.
+  const meta =
+    page.status === "draft" ? `Draft · ${page.modified}` : page.modified
+  return [
+    {
+      id: page.id,
+      title: page.title,
+      meta,
+      thumbnail: seed
+        ? { kind: "image", seed }
+        : { kind: "icon", icon: FileText },
+      action: {
+        type: "editor",
+        params: { kind: "page", id: page.id },
+      },
+    },
+  ]
+})
 
 export const adminRecipe: Recipe = {
   id: "admin",
@@ -324,6 +369,14 @@ export const adminRecipe: Recipe = {
           thumbnail: { kind: "icon", icon: Users },
         },
       ],
+    },
+    {
+      id: "info-jump-back-in",
+      kind: "info",
+      title: "Jump back in",
+      icon: History,
+      size: "wide",
+      items: jumpBackInItems,
     },
     {
       id: "info-quick-draft",
