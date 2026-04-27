@@ -1,6 +1,6 @@
-import { refKey } from "@/contexts/url"
 import { useContexts } from "@/contexts/store"
 import type { Context } from "@/contexts/types"
+import { findLaunchRect } from "./findLaunchRect"
 
 /**
  * Send the active context home with the proper reverse-launch
@@ -22,14 +22,5 @@ export function goHomeFromActive(active: Context | null): void {
     goHome()
     return
   }
-  const key = refKey({ type: active.type, params: active.params })
-  const el =
-    typeof document !== "undefined"
-      ? document.querySelector<HTMLElement>(`[data-launch-key="${key}"]`)
-      : null
-  // Pull the tile into view first so the rect we hand to `goHome` is
-  // the pose the user will actually see as the surface contracts.
-  el?.scrollIntoView({ block: "nearest", inline: "nearest" })
-  const rect = el?.getBoundingClientRect()
-  goHome(rect && rect.width > 0 && rect.height > 0 ? rect : null)
+  goHome(findLaunchRect(active))
 }
