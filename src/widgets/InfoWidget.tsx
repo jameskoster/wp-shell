@@ -65,7 +65,7 @@ export function InfoWidget({
           widget.render()
         ) : visibleItems.length > 0 ? (
           useScroll ? (
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-full" scrollFade>
               <ItemList
                 items={items}
                 onOpen={(action, rect) => open(action, rect)}
@@ -96,7 +96,7 @@ function ItemList({
   ) => void
 }) {
   return (
-    <ul>
+    <ul role="list">
       {items.map((item) => (
         <li key={item.id}>
           {item.action ? (
@@ -105,12 +105,12 @@ function ItemList({
               onClick={(e) =>
                 onOpen(item.action!, e.currentTarget.getBoundingClientRect())
               }
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/50 focus-visible:bg-accent/50"
+              className="flex w-full items-center gap-3 py-2 text-start outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40"
             >
               <ItemBody item={item} />
             </button>
           ) : (
-            <div className="flex items-center gap-2 px-2 py-1.5">
+            <div className="flex items-center gap-3 py-2">
               <ItemBody item={item} />
             </div>
           )}
@@ -126,20 +126,21 @@ function ItemBody({
   item: NonNullable<InfoWidgetDef["items"]>[number]
 }) {
   // Two layouts share this component:
-  //  - With a thumbnail, title sits over meta so the thumbnail anchors
-  //    against a 2-line text block (the canonical mail/messaging row).
-  //    A single-line title + side-meta next to a chunky 28px thumbnail
-  //    reads as misaligned because the thumbnail dominates vertically.
+  //  - With a thumbnail, the title sits over the meta so a 36px
+  //    thumbnail anchors against a proportional 2-line text block —
+  //    the canonical Tailwind UI / mail-app stacked-list row.
   //  - Without a thumbnail, the row stays inline with meta floated to
-  //    the right — the original compact info-list shape.
+  //    the right — keeps stat-style lists (Yoast bucket counts) tight.
   if (item.thumbnail) {
     return (
       <>
         <Thumbnail thumbnail={item.thumbnail} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm leading-tight">{item.title}</div>
+          <div className="truncate text-sm font-medium leading-tight">
+            {item.title}
+          </div>
           {item.meta ? (
-            <div className="mt-0.5 truncate text-xs leading-tight text-muted-foreground">
+            <div className="mt-1 truncate text-xs leading-tight text-muted-foreground">
               {item.meta}
             </div>
           ) : null}
@@ -152,7 +153,7 @@ function ItemBody({
     <>
       <span className="min-w-0 flex-1 truncate text-sm">{item.title}</span>
       {item.meta ? (
-        <span className="shrink-0 text-xs text-muted-foreground">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {item.meta}
         </span>
       ) : null}

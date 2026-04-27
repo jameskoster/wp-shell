@@ -25,12 +25,12 @@ export function Thumbnail({
     const seed = thumbnail.name
     const src =
       thumbnail.src ??
-      `https://i.pravatar.cc/64?u=${encodeURIComponent(seed)}`
+      `https://i.pravatar.cc/72?u=${encodeURIComponent(seed)}`
     return (
-      <Avatar className={cn("size-7", className)}>
+      <Avatar className={cn("size-9", className)}>
         <AvatarImage src={src} alt="" />
         <AvatarFallback
-          className="text-[10px] font-medium"
+          className="text-xs font-medium"
           style={pastel(seed)}
         >
           {initials(seed)}
@@ -43,12 +43,12 @@ export function Thumbnail({
     const seed = thumbnail.seed
     const src =
       thumbnail.src ??
-      `https://picsum.photos/seed/${encodeURIComponent(seed)}/64/64`
+      `https://picsum.photos/seed/${encodeURIComponent(seed)}/72/72`
     return (
-      <Avatar className={cn("size-7 rounded-md bg-muted", className)}>
+      <Avatar className={cn("size-9 rounded-md bg-muted", className)}>
         <AvatarImage src={src} alt={thumbnail.alt ?? ""} />
         <AvatarFallback
-          className="rounded-md text-[10px] font-medium"
+          className="rounded-md text-xs font-medium"
           style={pastel(seed)}
         >
           {seed.slice(0, 1).toUpperCase()}
@@ -63,10 +63,10 @@ export function Thumbnail({
       thumbnail.src ??
       `https://www.google.com/s2/favicons?domain=${encodeURIComponent(seed)}&sz=64`
     return (
-      <Avatar className={cn("size-7 rounded-md bg-muted p-1", className)}>
+      <Avatar className={cn("size-9 rounded-md bg-muted p-1.5", className)}>
         <AvatarImage src={src} alt="" className="object-contain" />
         <AvatarFallback
-          className="rounded-md text-[10px] font-medium"
+          className="rounded-md text-xs font-medium"
           style={pastel(seed)}
         >
           {(thumbnail.label ?? seed).slice(0, 1).toUpperCase()}
@@ -79,11 +79,11 @@ export function Thumbnail({
   return (
     <span
       className={cn(
-        "inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground",
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground",
         className,
       )}
     >
-      <Icon className="size-3.5" />
+      <Icon className="size-4" />
     </span>
   )
 }
