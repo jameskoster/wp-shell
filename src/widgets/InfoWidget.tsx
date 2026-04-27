@@ -8,6 +8,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useContexts } from "@/contexts/store"
 import type { InfoWidget as InfoWidgetDef, WidgetSize } from "./types"
+import { Thumbnail } from "./Thumbnail"
 import { WidgetMenu } from "./WidgetMenu"
 
 export function InfoWidget({
@@ -57,11 +58,11 @@ export function InfoWidget({
               : "No items."}
           </p>
         ) : widget.render ? (
-          useScroll ? (
-            <ScrollArea className="h-full">{widget.render()}</ScrollArea>
-          ) : (
-            widget.render()
-          )
+          // Custom renders own their own layout; we don't wrap them in
+          // a ScrollArea even at lg/xl, because the data-shape escape
+          // hatch is also where bespoke compositions (meters, gauges,
+          // forms) live and they assume full height control.
+          widget.render()
         ) : visibleItems.length > 0 ? (
           useScroll ? (
             <ScrollArea className="h-full">
@@ -104,27 +105,35 @@ function ItemList({
               onClick={(e) =>
                 onOpen(item.action!, e.currentTarget.getBoundingClientRect())
               }
-              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-start outline-none transition-colors hover:bg-accent/50 focus-visible:bg-accent/50"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start outline-none transition-colors hover:bg-accent/50 focus-visible:bg-accent/50"
             >
-              <span className="min-w-0 truncate text-sm">{item.title}</span>
-              {item.meta ? (
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {item.meta}
-                </span>
-              ) : null}
+              <ItemBody item={item} />
             </button>
           ) : (
-            <div className="flex items-center justify-between gap-2 px-2 py-2">
-              <span className="min-w-0 truncate text-sm">{item.title}</span>
-              {item.meta ? (
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {item.meta}
-                </span>
-              ) : null}
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <ItemBody item={item} />
             </div>
           )}
         </li>
       ))}
     </ul>
+  )
+}
+
+function ItemBody({
+  item,
+}: {
+  item: NonNullable<InfoWidgetDef["items"]>[number]
+}) {
+  return (
+    <>
+      {item.thumbnail ? <Thumbnail thumbnail={item.thumbnail} /> : null}
+      <span className="min-w-0 flex-1 truncate text-sm">{item.title}</span>
+      {item.meta ? (
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {item.meta}
+        </span>
+      ) : null}
+    </>
   )
 }

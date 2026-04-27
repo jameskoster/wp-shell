@@ -19,11 +19,33 @@ export type LaunchTileWidget = WidgetBase & {
   badge?: string
 }
 
+/**
+ * Visual hint rendered before an info list item's title. Variants
+ * cover the four shapes the dashboard's lists actually need:
+ *
+ *  - `avatar` — round, for people (orders, comments, authors).
+ *  - `image`  — rounded square, for products / featured images.
+ *  - `site`   — rounded square, for referrer favicons.
+ *  - `icon`   — rounded square, glyph fallback for entries with no
+ *               natural image (e.g. "Search engines", "Direct").
+ *
+ * Each variant has a deterministic offline fallback (hashed pastel
+ * background + initials/letter) so the prototype reads even without
+ * network. When online, the `src` defaults derive from the seed
+ * (pravatar / picsum / google favicon) and are overridable per item.
+ */
+export type ItemThumbnail =
+  | { kind: "avatar"; name: string; src?: string }
+  | { kind: "image"; seed: string; src?: string; alt?: string }
+  | { kind: "site"; domain: string; src?: string; label?: string }
+  | { kind: "icon"; icon: LucideIcon }
+
 export type InfoListItem = {
   id: string
   title: string
   meta?: string
   action?: ContextRef
+  thumbnail?: ItemThumbnail
 }
 
 export type InfoWidget = WidgetBase & {
