@@ -108,6 +108,10 @@ function DraggableSlot({
         gridColumn: `${slot.rect.col + 1} / span ${slot.rect.w}`,
         gridRow: `${slot.rect.row + 1} / span ${slot.rect.h}`,
       }}
+      // Reserve the canvas-level dblclick (exit customize) for empty
+      // gutters / padding only; double-clicking on a widget surface
+      // shouldn't drop the user out of edit mode.
+      onDoubleClick={customizing ? (e) => e.stopPropagation() : undefined}
     >
       <div
         className={cn(
