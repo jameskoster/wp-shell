@@ -26,6 +26,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react"
+import { renderQuickDraft } from "@/widgets/QuickDraftForm"
 import { renderSiteHealth } from "@/widgets/SiteHealthMeter"
 import type { Recipe } from "@/widgets/types"
 
@@ -210,26 +211,7 @@ export const adminRecipe: Recipe = {
       title: "Quick draft",
       icon: PenLine,
       size: "lg",
-      items: [
-        {
-          id: "d1",
-          title: "Holiday gift guide ideas",
-          meta: "Draft · 2d ago",
-          thumbnail: { kind: "image", seed: "holiday-gift-guide" },
-        },
-        {
-          id: "d2",
-          title: "Behind the studio: spring",
-          meta: "Draft · 5d ago",
-          thumbnail: { kind: "image", seed: "studio-spring" },
-        },
-        {
-          id: "d3",
-          title: "Restock notes — brass lamps",
-          meta: "Draft · 1w ago",
-          thumbnail: { kind: "image", seed: "brass-lamp-restock" },
-        },
-      ],
+      render: renderQuickDraft,
     },
     {
       id: "info-site-health",
