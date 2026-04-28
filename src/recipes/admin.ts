@@ -143,7 +143,7 @@ export const adminRecipe: Recipe = {
       kind: "info",
       title: "Recent orders",
       icon: ShoppingBag,
-      size: "wide",
+      size: "hero",
       items: recentOrderItems,
     },
     {

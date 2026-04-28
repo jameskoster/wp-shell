@@ -99,9 +99,15 @@ export function AnalyticsWidget({
   const showSparkline = !compact && Boolean(widget.metric.sparkline)
   const showCaption = !compact && Boolean(widget.metric.caption)
   const tallSparkline =
-    size === "lg" || size === "wide" || size === "xl"
+    size === "lg" ||
+    size === "wide" ||
+    size === "xl" ||
+    size === "hero"
   const valueClass =
-    size === "lg" || size === "wide" || size === "xl"
+    size === "lg" ||
+    size === "wide" ||
+    size === "xl" ||
+    size === "hero"
       ? "text-4xl"
       : "text-3xl"
 

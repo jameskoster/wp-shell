@@ -31,7 +31,11 @@ export function InfoWidget({
       : size === "md" || size === "tall"
         ? items.slice(0, 2)
         : items
-  const useScroll = size === "lg" || size === "wide" || size === "xl"
+  const useScroll =
+    size === "lg" ||
+    size === "wide" ||
+    size === "xl" ||
+    size === "hero"
 
   return (
     <Card className="group h-full overflow-hidden">
