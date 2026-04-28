@@ -1,5 +1,5 @@
 import type { ReactNode, MouseEvent as ReactMouseEvent } from "react"
-import type { LucideIcon } from "lucide-react"
+import { Menu as MenuIcon } from "lucide-react"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,6 +11,7 @@ import {
 import type { Context } from "@/contexts/types"
 import { cn } from "@/lib/utils"
 import { ContextHeaderActions } from "./ContextHeaderActions"
+import { useContextLayout } from "./ContextLayout"
 
 type ContextHeaderProps = {
   ctx?: Context
@@ -22,6 +23,12 @@ type ContextHeaderProps = {
    * `…` button rather than the title.
    */
   actions?: ReactNode
+  /**
+   * Optional horizontal navigation rendered as a second row of the
+   * header (typically a `<ContextHeaderTabs>`). Workspaces drop this
+   * during drilldown to make the horizontal nav disappear.
+   */
+  tabs?: ReactNode
   /**
    * Title content — typically `<ContextHeader.Title>` or
    * `<ContextHeader.Breadcrumb>`.
@@ -40,48 +47,69 @@ type ContextHeaderProps = {
  *     ctx={ctx}
  *     actions={<Button size="sm">Add new</Button>}
  *   >
- *     <ContextHeader.Title icon={FileText} subtitle={`${count} pages`}>
+ *     <ContextHeader.Title subtitle={`${count} pages`}>
  *       Pages
  *     </ContextHeader.Title>
  *   </ContextHeader>
  *
- * For breadcrumb-style titles (e.g. Editor, or Orders → Order #123),
- * use `<ContextHeader.Breadcrumb parents={…} current={…} />` as the
- * child instead of `<ContextHeader.Title>`.
+ * Mobile: when the workspace has a `<ContextSubnav>` inside the same
+ * `<ContextLayout>`, a hamburger leading-button is rendered below `md`
+ * that opens the sidebar drawer. Workspaces don't pass anything new
+ * for this — it's wired up via the layout context.
+ *
+ * For breadcrumb-style titles (e.g. Editor, or Settings → Zones →
+ * Zone name), use `<ContextHeader.Breadcrumb parents={…} current={…} />`
+ * as the child instead of `<ContextHeader.Title>`.
  */
 export function ContextHeader({
   ctx,
   className,
   actions,
+  tabs,
   children,
 }: ContextHeaderProps) {
+  const { hasSidebar, drawerOpen, toggleDrawer } = useContextLayout()
   return (
-    <header
-      className={cn(
-        "flex items-center justify-between gap-4 border-b px-6 py-4",
-        className,
-      )}
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-3">{children}</div>
-      <div className="flex shrink-0 items-center gap-2">
-        {actions}
-        {ctx ? <ContextHeaderActions ctx={ctx} /> : null}
+    <header className={cn("border-b", className)}>
+      <div className="flex items-center justify-between gap-4 px-6 py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {hasSidebar ? (
+            <button
+              type="button"
+              onClick={toggleDrawer}
+              aria-label="Open navigation"
+              aria-expanded={drawerOpen}
+              aria-controls="context-subnav-drawer"
+              className="-ml-1 inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 md:hidden"
+            >
+              <MenuIcon className="size-5" />
+            </button>
+          ) : null}
+          {children}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {actions}
+          {ctx ? <ContextHeaderActions ctx={ctx} /> : null}
+        </div>
       </div>
+      {tabs ? (
+        <div className="overflow-x-auto px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabs}
+        </div>
+      ) : null}
     </header>
   )
 }
 
 type TitleProps = {
-  icon?: LucideIcon
   subtitle?: ReactNode
   badges?: ReactNode
   children: ReactNode
 }
 
-function ContextHeaderTitle({ icon: Icon, subtitle, badges, children }: TitleProps) {
+function ContextHeaderTitle({ subtitle, badges, children }: TitleProps) {
   return (
     <>
-      {Icon ? <Icon className="size-5 shrink-0 text-muted-foreground" /> : null}
       <div className="min-w-0">
         <h1 className="truncate font-heading text-lg font-semibold">{children}</h1>
         {subtitle ? (
@@ -120,53 +148,70 @@ type BreadcrumbProps = {
    */
   parents?: BreadcrumbCrumb | BreadcrumbCrumb[] | null
   current: ReactNode
+  /**
+   * Optional description rendered beneath the breadcrumb row, mirroring
+   * `<ContextHeader.Title>`'s `subtitle`. Use this in drilldown views
+   * to give the deeper context a different description without losing
+   * the breadcrumb hierarchy.
+   */
+  subtitle?: ReactNode
   badges?: ReactNode
 }
 
-function ContextHeaderBreadcrumb({ parents, current, badges }: BreadcrumbProps) {
+function ContextHeaderBreadcrumb({
+  parents,
+  current,
+  subtitle,
+  badges,
+}: BreadcrumbProps) {
   const crumbs = parents == null ? [] : Array.isArray(parents) ? parents : [parents]
   return (
     <>
-      <Breadcrumb className="min-w-0">
-        <BreadcrumbList className="flex-nowrap text-base sm:text-base">
-          {crumbs.map((crumb, i) => (
-            // Position is the only meaningful identity for ancestor
-            // crumbs in this list — labels can repeat ("Settings" >
-            // "Settings") and they're never reordered.
-            // eslint-disable-next-line react/no-array-index-key
-            <span key={i} className="contents">
-              <BreadcrumbItem>
-                {crumb.onClick ? (
-                  <BreadcrumbLink
-                    render={
-                      <button
-                        type="button"
-                        onClick={crumb.onClick}
-                        className="font-heading text-lg font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
-                      />
-                    }
-                  >
-                    {crumb.label}
-                  </BreadcrumbLink>
-                ) : (
-                  <span className="font-heading text-lg font-medium text-muted-foreground">
-                    {crumb.label}
-                  </span>
-                )}
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-muted-foreground/60" />
-            </span>
-          ))}
-          <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage
-              className="min-w-0 truncate font-heading text-lg font-semibold"
-              title={typeof current === "string" ? current : undefined}
-            >
-              {current}
-            </BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="min-w-0">
+        <Breadcrumb className="min-w-0">
+          <BreadcrumbList className="flex-nowrap text-base sm:text-base">
+            {crumbs.map((crumb, i) => (
+              // Position is the only meaningful identity for ancestor
+              // crumbs in this list — labels can repeat ("Settings" >
+              // "Settings") and they're never reordered.
+              // eslint-disable-next-line react/no-array-index-key
+              <span key={i} className="contents">
+                <BreadcrumbItem>
+                  {crumb.onClick ? (
+                    <BreadcrumbLink
+                      render={
+                        <button
+                          type="button"
+                          onClick={crumb.onClick}
+                          className="font-heading text-lg font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
+                        />
+                      }
+                    >
+                      {crumb.label}
+                    </BreadcrumbLink>
+                  ) : (
+                    <span className="font-heading text-lg font-medium text-muted-foreground">
+                      {crumb.label}
+                    </span>
+                  )}
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60" />
+              </span>
+            ))}
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage
+                className="min-w-0 truncate font-heading text-lg font-semibold"
+                title={typeof current === "string" ? current : undefined}
+              >
+                {current}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        {subtitle ? (
+          <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+        ) : null}
+      </div>
       {badges ? <div className="flex shrink-0 items-center gap-2">{badges}</div> : null}
     </>
   )

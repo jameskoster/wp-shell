@@ -1,63 +1,102 @@
-import { ChevronsLeft, ChevronsRight, type LucideIcon } from "lucide-react"
+import { useEffect, useRef } from "react"
 import type { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useContextLayout } from "./ContextLayout"
 
 type ContextSubnavProps = {
   children: ReactNode
   className?: string
-  collapsible?: boolean
-  header?: ReactNode
 }
+
+const DRAWER_ID = "context-subnav-drawer"
 
 export function ContextSubnav({
   children,
   className,
-  collapsible = true,
-  header,
 }: ContextSubnavProps) {
-  const { collapsed, toggleCollapsed } = useContextLayout()
+  const { registerSidebar, drawerOpen, closeDrawer } = useContextLayout()
+  const asideRef = useRef<HTMLElement | null>(null)
+  const previouslyFocused = useRef<HTMLElement | null>(null)
+
+  useEffect(() => registerSidebar(), [registerSidebar])
+
+  // Drawer-open side effects: body scroll lock, Esc-to-close, focus
+  // management. md+ ignores all of this since the rail is always
+  // visible there — but the state is still set, so we gate on
+  // `matchMedia` to avoid hijacking focus on desktop.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const isMobile = window.matchMedia("(max-width: 767px)").matches
+    if (!drawerOpen || !isMobile) return
+
+    previouslyFocused.current =
+      (document.activeElement as HTMLElement | null) ?? null
+    const focusables = asideRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+    focusables?.[0]?.focus()
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        closeDrawer()
+      }
+    }
+    document.addEventListener("keydown", onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prevOverflow
+      previouslyFocused.current?.focus?.()
+    }
+  }, [drawerOpen, closeDrawer])
+
   return (
-    <aside
-      data-collapsed={collapsed ? "true" : "false"}
-      className={cn(
-        "flex shrink-0 flex-col border-r bg-background/40 transition-[width] duration-200 ease-out",
-        collapsed ? "w-12" : "w-56",
-        className
-      )}
-      aria-label="Section navigation"
-    >
-      {(header || collapsible) && (
-        <div
-          className={cn(
-            "flex items-center gap-1 border-b px-2 py-2",
-            collapsed ? "justify-center" : "justify-between"
-          )}
+    <>
+      {drawerOpen ? (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={closeDrawer}
+          className="fixed inset-0 z-40 cursor-default bg-foreground/30 backdrop-blur-[1px] md:hidden"
+        />
+      ) : null}
+      <aside
+        ref={asideRef}
+        id={DRAWER_ID}
+        aria-label="Section navigation"
+        aria-modal={drawerOpen ? "true" : undefined}
+        role={drawerOpen ? "dialog" : undefined}
+        // Two layouts in one element. md+: static rail in the flex row.
+        // md-: fixed off-canvas drawer that translates in when
+        // `drawerOpen` is set. Click-through on the drawer surface is
+        // handled by the click-handler intercept on `<nav>` below.
+        className={cn(
+          "flex shrink-0 flex-col border-r bg-background",
+          "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-72",
+          "max-md:transition-transform max-md:duration-200 max-md:ease-out",
+          "max-md:-translate-x-full",
+          drawerOpen && "max-md:translate-x-0 max-md:shadow-2xl",
+          "md:relative md:w-56 md:translate-x-0 md:shadow-none md:bg-background/40",
+          className
+        )}
+      >
+        {/* Click intercept: any item-click inside the drawer closes it.
+            Doesn't fire on desktop because the drawer state isn't open
+            there. Cheap and avoids per-item wiring. */}
+        <nav
+          className="flex-1 overflow-y-auto px-2 py-2"
+          onClick={() => {
+            if (drawerOpen) closeDrawer()
+          }}
         >
-          {!collapsed && header ? (
-            <div className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-              {header}
-            </div>
-          ) : null}
-          {collapsible ? (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-pressed={collapsed}
-              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50"
-            >
-              {collapsed ? (
-                <ChevronsRight className="size-4" />
-              ) : (
-                <ChevronsLeft className="size-4" />
-              )}
-            </button>
-          ) : null}
-        </div>
-      )}
-      <nav className="flex-1 overflow-y-auto px-2 py-2">{children}</nav>
-    </aside>
+          {children}
+        </nav>
+      </aside>
+    </>
   )
 }
 
@@ -70,10 +109,9 @@ function Group({
   children: ReactNode
   className?: string
 }) {
-  const { collapsed } = useContextLayout()
   return (
     <div className={cn("mb-3 last:mb-0", className)}>
-      {label && !collapsed ? (
+      {label ? (
         <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
           {label}
         </div>
@@ -102,17 +140,15 @@ function Item({
   title,
   className,
 }: ItemProps) {
-  const { collapsed } = useContextLayout()
   return (
     <li>
       <button
         type="button"
         onClick={onClick}
         aria-current={active ? "page" : undefined}
-        title={collapsed && typeof children === "string" ? children : title}
+        title={title}
         className={cn(
           "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm outline-none transition-colors",
-          collapsed && "justify-center px-0",
           active
             ? "bg-accent text-accent-foreground"
             : "text-muted-foreground hover:bg-accent/40 hover:text-foreground focus-visible:bg-accent/40",
@@ -127,22 +163,18 @@ function Item({
             )}
           />
         ) : null}
-        {!collapsed ? (
-          <>
-            <span className="min-w-0 flex-1 truncate">{children}</span>
-            {count !== undefined && count !== "" ? (
-              <span
-                className={cn(
-                  "shrink-0 rounded-sm px-1.5 text-[11px] tabular-nums",
-                  active
-                    ? "bg-background/60 text-foreground"
-                    : "text-muted-foreground/80 group-hover:text-muted-foreground"
-                )}
-              >
-                {count}
-              </span>
-            ) : null}
-          </>
+        <span className="min-w-0 flex-1 truncate">{children}</span>
+        {count !== undefined && count !== "" ? (
+          <span
+            className={cn(
+              "shrink-0 rounded-sm px-1.5 text-[11px] tabular-nums",
+              active
+                ? "bg-background/60 text-foreground"
+                : "text-muted-foreground/80 group-hover:text-muted-foreground"
+            )}
+          >
+            {count}
+          </span>
         ) : null}
       </button>
     </li>

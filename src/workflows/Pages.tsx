@@ -9,6 +9,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -177,7 +178,7 @@ export function Pages({ ctx }: { ctx: Context }) {
 
   return (
     <ContextLayout>
-      <ContextSubnav header="Status">
+      <ContextSubnav>
         <ContextSubnav.Group>
           {VIEWS.map((v) => (
             <ContextSubnav.Item
@@ -213,9 +214,9 @@ export function Pages({ ctx }: { ctx: Context }) {
           </ContextHeader.Title>
         </ContextHeader>
 
-        <div className="flex items-center gap-2 border-b px-6 py-3">
+        <div className="flex items-center gap-2 border-b px-6 py-4">
           <div className="relative max-w-sm flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search pages…"
@@ -226,12 +227,12 @@ export function Pages({ ctx }: { ctx: Context }) {
             />
           </div>
           {someSelected ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{selected.size} selected</span>
-              <Button size="xs" variant="outline" disabled>
+              <Button size="sm" variant="outline" disabled>
                 Bulk edit
               </Button>
-              <Button size="xs" variant="destructive-outline" disabled>
+              <Button size="sm" variant="destructive-outline" disabled>
                 Trash
               </Button>
             </div>
@@ -239,10 +240,10 @@ export function Pages({ ctx }: { ctx: Context }) {
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="px-2">
+          <div className="px-3.5">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="[&>th]:h-12">
                   <TableHead className="w-px">
                     <Checkbox
                       checked={allSelected}
@@ -251,10 +252,10 @@ export function Pages({ ctx }: { ctx: Context }) {
                       aria-label="Select all pages"
                     />
                   </TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="w-32">Status</TableHead>
-                  <TableHead className="w-40">Author</TableHead>
-                  <TableHead className="w-44">Modified</TableHead>
+                  <TableHead className="font-semibold text-foreground">Title</TableHead>
+                  <TableHead className="w-32 font-semibold text-foreground">Status</TableHead>
+                  <TableHead className="w-40 font-semibold text-foreground">Author</TableHead>
+                  <TableHead className="w-44 font-semibold text-foreground">Modified</TableHead>
                   <TableHead className="w-px" />
                 </TableRow>
               </TableHeader>
@@ -267,46 +268,57 @@ export function Pages({ ctx }: { ctx: Context }) {
                       key={page.id}
                       data-state={isSelected ? "selected" : undefined}
                     >
-                      <TableCell>
+                      <TableCell className="py-3">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggleOne(page.id)}
                           aria-label={`Select ${page.title}`}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3">
                         <button
                           type="button"
                           onClick={(e) => handleTitleClick(page, e)}
-                          className="text-start outline-none transition-colors hover:text-primary focus-visible:text-primary"
+                          className="flex items-center gap-3 text-start outline-none transition-colors hover:text-primary focus-visible:text-primary"
                         >
-                          <span className="font-medium">{page.title}</span>
-                          {page.isFrontPage ? (
-                            <Badge
-                              variant="outline"
-                              size="sm"
-                              className="ms-2 align-middle"
-                            >
-                              Front page
-                            </Badge>
-                          ) : null}
-                          <span className="block text-xs text-muted-foreground">
-                            {page.slug}
+                          <Avatar
+                            className="size-9 rounded-md"
+                            aria-hidden="true"
+                          >
+                            <AvatarFallback className="rounded-md text-sm font-medium uppercase text-muted-foreground">
+                              {page.title.slice(0, 1)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0 font-medium">
+                            {page.title}
+                            {page.isFrontPage ? (
+                              <Badge
+                                variant="outline"
+                                size="lg"
+                                className="ms-2 px-2 align-middle leading-5"
+                              >
+                                Front page
+                              </Badge>
+                            ) : null}
                           </span>
                         </button>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant} size="sm">
+                      <TableCell className="py-3">
+                        <Badge
+                          variant={status.variant}
+                          size="lg"
+                          className="px-2 leading-5"
+                        >
                           {status.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="py-3 text-muted-foreground">
                         {page.author}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="py-3 text-muted-foreground">
                         {page.modified}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3">
                         <Menu>
                           <MenuTrigger
                             render={
@@ -345,7 +357,7 @@ export function Pages({ ctx }: { ctx: Context }) {
                   <TableRow>
                     <TableCell
                       colSpan={6}
-                      className="py-12 text-center text-sm text-muted-foreground"
+                      className="py-12 text-center text-muted-foreground"
                     >
                       No pages match this view.
                     </TableCell>

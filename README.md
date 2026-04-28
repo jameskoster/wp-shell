@@ -113,9 +113,9 @@ them. Closing the Editor falls back to Pages via the LRU stack.
 1. Add a mock dataset in `src/mocks/<thing>.ts`.
 2. Register a singleton context type in `src/contexts/{types,registry,url}.ts`.
 3. Build `src/workflows/<Thing>.tsx`, composing `<ContextLayout>` +
-   `<ContextSubnav>` for the secondary navigation slot, with the dataview
-   in `<ContextLayout.Main>`. Row clicks dispatch `open({ type: 'editor',
-   params: { kind: '<thing>', id } })`.
+   `<ContextSubnav>` for the primary intra-context navigation, with the
+   dataview in `<ContextLayout.Main>`. Row clicks dispatch
+   `open({ type: 'editor', params: { kind: '<thing>', id } })`.
 4. Register the workflow in `src/workflows/index.tsx`.
 5. Wire it up wherever it should be reached (recipe nav widget, destination
    list, etc.).
@@ -125,37 +125,106 @@ prototype — its mockup canvas just renders whatever document the params
 point at. In a real implementation, kind-specific document settings would
 live in the left rail.
 
-### Intra-context navigation: `<ContextLayout>` + `<ContextSubnav>`
+### Intra-context navigation
 
-Every context that has internal structure uses the same secondary-nav
-slot — a left rail. `Pages` uses it for status views (All, Published,
-Drafts, Scheduled, Trash); `Settings`, `Templates`, `Patterns` will use it
-for sections, kinds, and categories respectively. The Editor is the
-explicit exception (its chrome owns both rails for document/inspector).
+Three composable layers, any of which a workspace may opt into:
+
+1. **Primary navigation — sidebar** (`<ContextSubnav>`). A static rail
+   on the left. `Pages` uses it for status views; `Settings` uses it
+   for sections (General, Reading, Shipping, …).
+2. **Secondary navigation — horizontal nav** (`<ContextHeaderTabs>`).
+   Renders as a second row inside `<ContextHeader>`. Used for
+   sub-sections within a sidebar item (e.g. Shipping → Zones / Classes
+   / Methods), or as the *primary* nav when a workspace doesn't use a
+   sidebar at all (e.g. Marketing).
+3. **Drilldown.** Clicking an item in the content area enters a deeper
+   context — the horizontal nav disappears, the title becomes a
+   breadcrumb (`Zones / Zone name`), and the description can change.
+   The sidebar stays put with its current selection. Settings → Shipping
+   → Zones → click a zone is the canonical example.
+
+**Header title rule.** When the workspace has a sidebar, the header
+title reflects the **active sidebar item** (e.g. "Shipping"). When the
+workspace has no sidebar, the header title is just the workspace name
+(e.g. "Marketing"); the active horizontal tab is conveyed by the
+underline in the tabs row, *not* by mutating the title. The header
+title never carries an icon in either case — the workspace icon already
+appears in the switcher tile and admin bar, and a sidebar's selected
+item carries its own icon. `Context.title` (used by the switcher tile,
+palette, and admin bar) always stays as the workspace name.
+
+The Editor is the explicit exception to all of this — its chrome owns
+both rails for document/inspector and uses the breadcrumb directly.
 
 ```tsx
 <ContextLayout>
-  <ContextSubnav header="Status">
+  <ContextSubnav>
     <ContextSubnav.Group>
-      <ContextSubnav.Item icon={FileText} active count={16}>
-        All pages
+      <ContextSubnav.Item icon={Truck} active onClick={() => setSection("shipping")}>
+        Shipping
       </ContextSubnav.Item>
-      <ContextSubnav.Item icon={FileEdit} count={4}>
-        Drafts
-      </ContextSubnav.Item>
+      {/* … */}
     </ContextSubnav.Group>
   </ContextSubnav>
   <ContextLayout.Main>
-    {/* table, form, anything */}
+    <ContextHeader
+      ctx={ctx}
+      tabs={
+        !drilldown ? (
+          <ContextHeaderTabs label="Shipping sections">
+            <ContextHeaderTabs.Tab active={tab === "zones"} onClick={() => setTab("zones")}>
+              Zones
+            </ContextHeaderTabs.Tab>
+            {/* … */}
+          </ContextHeaderTabs>
+        ) : undefined
+      }
+    >
+      {drilldown ? (
+        <ContextHeader.Breadcrumb
+          parents={{ label: "Zones", onClick: clearItem }}
+          current={zone.name}
+          subtitle={zone.description}
+        />
+      ) : (
+        <ContextHeader.Title subtitle={section.description}>
+          {section.label}
+        </ContextHeader.Title>
+      )}
+    </ContextHeader>
+    {/* content */}
   </ContextLayout.Main>
 </ContextLayout>
 ```
 
-The rail is collapsible (chevron in its header) and selection is the
-consumer's concern — the primitive emits via `onClick`, the workflow
-decides what active means. Pages persists its active subview as the
-context's `view` URL param so Cmd-` back-and-forth restores the same
+`<ContextHeaderTabs>` is a semantic `<nav>` with `aria-current="page"`
+on the active item — *not* an ARIA tablist. Activating a tab changes
+URL params and the workspace state, not just a panel within the same
 view.
+
+State persists in the context's URL params (Settings uses
+`section` / `tab` / `item`; Marketing uses `tab`), so Cmd-` away and
+back, deep links, and switcher tiles all restore the same view. `item`
+is only meaningful when paired with `tab`. Switching sidebar sections
+clears `tab` and `item` — predictable beats clever.
+
+Future deeper drilldowns (Zone → Method → Rate) will replace the flat
+`item` param with a `path` (slash-separated or array). The
+`<ContextHeader.Breadcrumb>` `parents` array already accepts the shape.
+
+#### Mobile drawer
+
+Below `md` (≥768px), the sidebar is hidden by default and revealed via
+a hamburger button rendered to the left of the title in
+`<ContextHeader>`. The hamburger appears automatically when the
+workspace's `<ContextLayout>` contains a `<ContextSubnav>` — no per-
+workspace wiring. The drawer slides in from the left with a backdrop;
+closes on backdrop click, Esc, or any item click. Workspaces without a
+sidebar (e.g. Marketing) don't get a hamburger.
+
+This is the only mobile pattern in the prototype — the rest of the
+shell chrome (admin bar, workspace switcher, dashboard) is still
+desktop-first.
 
 ### Widgets
 
@@ -245,7 +314,8 @@ and stay live. Trade-offs:
 src/
   shell/             — Shell.tsx, AdminBar, CommandPalette, ContextStage,
                        ContextTile, ContextSwitcher, ContextLayout,
-                       ContextSubnav, stageLayout, useShortcuts, uiStore
+                       ContextSubnav, ContextHeader, ContextHeaderTabs,
+                       stageLayout, useShortcuts, uiStore
   contexts/          — store, types, registry (per-type metadata + destinations
                        + singletonKey + resolveDefaultParams),
                        url (hash <-> ref)
@@ -254,7 +324,7 @@ src/
   workflows/         — Dashboard (home), Pages (dataview), Editor (mockup),
                        AddProduct, EditPage, Settings, Orders, Marketing,
                        Analytics, ProductReviews, ContextSurface
-  mocks/             — notifications, user, pages
+  mocks/             — notifications, user, pages, settings
   components/ui/     — coss/ui (shadcn-compatible) primitives
   lib/utils.ts       — cn helper
 ```
@@ -286,13 +356,15 @@ Per the plans, the current build still excludes:
   handling)
 - Posts / Templates / Patterns / Navigation as their own dataviews — the
   model is shaped to absorb them; future slices ship them
-- Settings retrofit onto `<ContextLayout>`
 - A site-preview dashboard widget that opens the Editor on the homepage
 - Unbundling Appearance into `Templates` / `Patterns` / `Styles` /
   `Navigation` siblings in the classic-admin nav widget
 - Time-to-destination measurement harness
 - Widget reordering / resizing UI
-- Mobile layout (desktop-first)
+- A full mobile pass on the shell chrome (admin bar, workspace
+  switcher, dashboard, command palette). Workspace sidebars do get a
+  mobile drawer — see "Intra-context navigation" — but the rest is
+  still desktop-first.
 
 ## Notes from this build
 

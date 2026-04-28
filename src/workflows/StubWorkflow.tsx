@@ -23,7 +23,7 @@ export function StubWorkflow({ title, description, icon: Icon, hint, ctx }: Prop
   return (
     <div className="flex flex-1 flex-col">
       <ContextHeader ctx={ctx}>
-        <ContextHeader.Title icon={Icon}>{title}</ContextHeader.Title>
+        <ContextHeader.Title>{title}</ContextHeader.Title>
       </ContextHeader>
       <Empty className="flex-1">
         <EmptyHeader>
