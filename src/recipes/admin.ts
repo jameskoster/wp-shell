@@ -99,7 +99,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Revenue this week",
       icon: DollarSign,
-      size: "xl",
+      size: "lg",
       metric: {
         value: "$8,420",
         delta: { value: "+12.4%", trend: "up" },
@@ -112,7 +112,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Orders this week",
       icon: ShoppingBag,
-      size: "xl",
+      size: "lg",
       metric: {
         value: "184",
         delta: { value: "+8", trend: "up" },
@@ -125,7 +125,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Conversion rate",
       icon: TrendingUp,
-      size: "xl",
+      size: "lg",
       metric: {
         value: "2.4%",
         delta: { value: "-0.2%", trend: "down" },
@@ -423,7 +423,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Site views",
       icon: Eye,
-      size: "xl",
+      size: "lg",
       metric: {
         value: "12,840",
         delta: { value: "+18.2%", trend: "up" },
@@ -436,7 +436,7 @@ export const adminRecipe: Recipe = {
       kind: "analytics",
       title: "Visitors",
       icon: LineChart,
-      size: "xl",
+      size: "lg",
       metric: {
         value: "4,210",
         delta: { value: "+6.4%", trend: "up" },
