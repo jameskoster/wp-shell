@@ -188,7 +188,7 @@ export function renderDockButton(
       ) : null}
       {item.badge ? (
         <Badge
-          variant="secondary"
+          variant="destructive"
           className={cn(
             "pointer-events-none absolute text-[11px]",
             badgeClassesFor(position),
@@ -485,9 +485,9 @@ function CustomizeAwareContainer({
   const itemTrack = (
     <div
       className={cn(
-        "flex gap-1",
+        "flex gap-1 p-1.5",
         orientation === "horizontal"
-          ? "w-max flex-row items-center"
+          ? "w-max flex-row items-center pb-[max(0.375rem,env(safe-area-inset-bottom))]"
           : "h-max flex-col items-center",
       )}
     >
@@ -552,12 +552,10 @@ function CustomizeAwareContainer({
       aria-label="Dock"
       aria-orientation={orientation}
       className={cn(
-        "flex rounded-2xl border bg-card/80 p-1.5 shadow-lg/10 backdrop-blur",
+        "flex rounded-2xl border bg-card/80 shadow-lg/10 backdrop-blur",
         orientation === "horizontal"
           ? "max-w-[calc(100vw-1.5rem)]"
           : "max-h-[calc(100svh-6rem)]",
-        orientation === "horizontal" &&
-          "pb-[max(0.375rem,env(safe-area-inset-bottom))]",
         // Drop-target affordances during a drag.
         customizing &&
           drag &&

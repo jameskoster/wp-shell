@@ -34,7 +34,7 @@ export function LaunchTile({
         ) : null}
         {widget.badge ? (
           <Badge
-            variant="secondary"
+            variant="destructive"
             className="pointer-events-none absolute right-5 bottom-5 text-[11px]"
           >
             {widget.badge}
