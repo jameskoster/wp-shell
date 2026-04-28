@@ -115,7 +115,7 @@ export const adminRecipe: Recipe = {
       size: { w: 6, h: 4 },
       minSize: { w: 3, h: 2 },
       action: { type: "editor", title: "Appearance" },
-      caption: "studiopark.example",
+      url: "studiopark.example/",
     },
     {
       id: "metric-revenue",

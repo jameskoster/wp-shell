@@ -118,8 +118,12 @@ export type NavWidget = Omit<WidgetBase, "title"> & {
 export type SitePreviewWidget = WidgetBase & {
   kind: "site-preview"
   action: ContextRef
-  /** Optional caption rendered in the title bar (e.g. the site URL). */
-  caption?: string
+  /**
+   * URL displayed in the widget's address bar. Defaults to a
+   * placeholder when omitted. Eventually this'll become the editable
+   * field the user changes to swap the page being previewed.
+   */
+  url?: string
 }
 
 export type WidgetDef =

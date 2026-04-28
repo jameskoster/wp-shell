@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from "react"
+import { Lock } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
 import { launchKey } from "@/contexts/registry"
-import { cn } from "@/lib/utils"
-import { Canvas, homepageDoc } from "@/workflows/editor/Canvas"
 import type { SitePreviewWidget as SitePreviewWidgetDef } from "./types"
+import { Canvas, homepageDoc } from "@/workflows/editor/Canvas"
 import { WidgetMenu } from "./WidgetMenu"
 
 /**
@@ -23,11 +23,16 @@ const PREVIEW_SITE_WIDTH = 1280
  * eCommerce homepage layout), scaled to whatever cell the dashboard
  * grid hands us.
  *
- * Behaves as a single click-target — clicking anywhere opens
- * `widget.action` (typically the Appearance / Editor workspace landed
- * on the homepage). The embedded canvas is `inert` + `pointer-events-
- * none` so its visual buttons / nav don't compete with the wrapper's
- * click.
+ * Layout — two stacked rows inside one Card:
+ *  1. Address-bar row — browser-chrome themed strip with a URL pill
+ *     and the widget menu. Sits OUTSIDE the click-target so future
+ *     iterations can make the URL itself editable (the user's eventual
+ *     intent: change the page being previewed) without nesting buttons.
+ *  2. Canvas stage — the scaled homepage `Canvas`, overlaid with an
+ *     invisible click-catcher `<button>` that opens `widget.action`
+ *     (typically the Appearance / Editor workspace landed on the
+ *     homepage). The canvas itself is `inert` + `pointer-events-none`
+ *     so its visual buttons / nav can't compete with the catcher.
  */
 export function SitePreviewWidget({
   widget,
@@ -35,75 +40,65 @@ export function SitePreviewWidget({
   widget: SitePreviewWidgetDef
 }) {
   const open = useContexts((s) => s.open)
-  const Icon = widget.icon
   const stageRef = useRef<HTMLDivElement | null>(null)
   const scale = useFitToWidth(stageRef, PREVIEW_SITE_WIDTH)
+  const url = widget.url ?? "studiopark.example/"
 
   return (
-    <div className="group relative h-full">
-      <Card
-        render={
-          <button
-            type="button"
-            data-launch-key={launchKey(widget.action)}
-            onClick={(e) =>
-              open(widget.action, e.currentTarget.getBoundingClientRect())
-            }
-            className="relative flex h-full w-full flex-col overflow-hidden p-0 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
-          />
-        }
+    <Card className="group relative flex h-full flex-col overflow-hidden p-0">
+      <AddressBar url={url} widgetId={widget.id} />
+      <div
+        ref={stageRef}
+        // Warm cream matches the eCommerce homepage's page bg so a
+        // sub-frame paint never flashes admin-white through the gaps;
+        // the canvas itself paints its own background once the scale
+        // lands.
+        className="relative flex-1 overflow-hidden bg-[#f4ede0] transition-transform duration-300 ease-out group-hover:scale-[1.02] group-focus-within:scale-[1.02] dark:bg-[#1c1813]"
       >
+        <button
+          type="button"
+          aria-label={`Open ${widget.title}`}
+          data-launch-key={launchKey(widget.action)}
+          onClick={(e) =>
+            open(widget.action, e.currentTarget.getBoundingClientRect())
+          }
+          // Click-catcher overlaid on the scaled canvas. No background
+          // — the canvas underneath is the visual; this just turns the
+          // whole stage into one click-target.
+          className="absolute inset-0 z-10 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        />
         <div
-          ref={stageRef}
-          className={cn(
-            "relative h-full w-full overflow-hidden bg-white dark:bg-neutral-950",
-            // Subtle zoom on hover/focus to hint that the preview is a
-            // single click-through; the chrome darkens in lockstep so
-            // the title overlay stays legible at any zoom.
-            "transition-transform duration-300 ease-out",
-            "group-hover:scale-[1.02] group-focus-within:scale-[1.02]",
-          )}
+          inert
+          aria-hidden
+          className="pointer-events-none origin-top-left select-none"
+          style={{
+            width: PREVIEW_SITE_WIDTH,
+            transform: `scale(${scale})`,
+          }}
         >
-          <div
-            // Render the canvas at its design width and scale to fit.
-            // `pointer-events-none` and `inert` together guarantee the
-            // canvas's interactive-looking elements (nav links, "Add to
-            // cart") never steal the wrapper button's click, even if
-            // they grow real handlers later.
-            inert
-            aria-hidden
-            className="pointer-events-none origin-top-left select-none"
-            style={{
-              width: PREVIEW_SITE_WIDTH,
-              transform: `scale(${scale})`,
-            }}
-          >
-            <Canvas doc={homepageDoc()} />
-          </div>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 via-black/20 to-transparent"
-          />
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-2 p-5 text-white">
-            {Icon ? <Icon className="size-4 opacity-80" /> : null}
-            <span className="truncate text-sm font-medium drop-shadow-sm">
-              {widget.title}
-            </span>
-            {widget.caption ? (
-              <span className="ml-auto truncate text-xs opacity-80 drop-shadow-sm">
-                {widget.caption}
-              </span>
-            ) : null}
-          </div>
+          <Canvas doc={homepageDoc()} />
         </div>
-      </Card>
-      <WidgetMenu
-        widgetId={widget.id}
-        // White-on-dark variant — the menu sits over the photo, where
-        // the standard muted-foreground icon would disappear into the
-        // gradient.
-        className="absolute top-3 right-3 z-20 text-white/90 hover:text-white"
-      />
+      </div>
+    </Card>
+  )
+}
+
+/**
+ * Browser-chrome strip at the top of the widget. The URL pill is
+ * non-functional today — it'll grow into an editable field that lets
+ * the user swap the page being previewed (Posts / About / a specific
+ * product). The widget menu (Remove) is anchored at the right; sitting
+ * inside the chrome row keeps it visually separated from the canvas
+ * (where it would otherwise overlap homepage content).
+ */
+function AddressBar({ url, widgetId }: { url: string; widgetId: string }) {
+  return (
+    <div className="relative z-20 flex shrink-0 items-center gap-2 border-b border-border/60 bg-muted/40 px-2.5 py-2 backdrop-blur">
+      <div className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-full border border-border/60 bg-background px-3 text-xs text-muted-foreground shadow-xs/5">
+        <Lock className="size-3 shrink-0" aria-hidden />
+        <span className="truncate text-foreground/80">{url}</span>
+      </div>
+      <WidgetMenu widgetId={widgetId} alwaysVisible />
     </div>
   )
 }

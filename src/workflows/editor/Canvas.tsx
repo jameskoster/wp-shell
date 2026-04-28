@@ -208,9 +208,17 @@ const NEW_ARRIVALS: Array<{
   { id: "n4", name: "Walnut tray — large", price: "$64", seed: "walnut-tray-large" },
 ]
 
+/**
+ * Homepage palette is intentionally OFF the admin's neutral palette —
+ * the dashboard chrome is white / cool-grey, the site preview is warm
+ * stone with a muted forest accent. Stops the embedded preview from
+ * looking like just another admin card and reads as "this is the
+ * brand". Custom hex on the page background nudges the warmth a touch
+ * past Tailwind's stone-50 (which is barely warmer than pure white).
+ */
 function EcommerceHomepage() {
   return (
-    <div className="bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+    <div className="bg-[#f4ede0] text-stone-900 dark:bg-[#1c1813] dark:text-stone-100">
       <SiteHeader />
       <Hero />
       <FeaturedGrid title="Best sellers" products={FEATURED_PRODUCTS} />
@@ -224,7 +232,7 @@ function EcommerceHomepage() {
 
 function SiteHeader() {
   return (
-    <header className="border-b border-neutral-200/80 dark:border-neutral-800/80">
+    <header className="border-b border-stone-200/80 dark:border-stone-800/80">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-5">
         <div className="font-heading text-xl font-semibold tracking-tight">
           Studio&nbsp;Park
@@ -235,12 +243,12 @@ function SiteHeader() {
           <a className="hover:opacity-70">Journal</a>
           <a className="hover:opacity-70">About</a>
         </nav>
-        <div className="flex items-center gap-4 text-neutral-700 dark:text-neutral-300">
+        <div className="flex items-center gap-4 text-stone-700 dark:text-stone-300">
           <Search className="size-4" />
           <User className="size-4" />
           <div className="relative">
             <ShoppingBag className="size-4" />
-            <span className="absolute -top-1.5 -right-2 inline-flex size-4 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-medium text-white tabular-nums dark:bg-neutral-100 dark:text-neutral-900">
+            <span className="absolute -top-1.5 -right-2 inline-flex size-4 items-center justify-center rounded-full bg-stone-900 text-[10px] font-medium text-white tabular-nums dark:bg-stone-100 dark:text-stone-900">
               2
             </span>
           </div>
@@ -252,10 +260,10 @@ function SiteHeader() {
 
 function Hero() {
   return (
-    <section className="border-b border-neutral-200/80 dark:border-neutral-800/80">
+    <section className="border-b border-stone-200/80 dark:border-stone-800/80">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-12 px-8 py-20">
         <div className="flex flex-col justify-center">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
             Spring collection · 2026
           </p>
           <h1 className="font-heading mt-4 text-5xl font-semibold leading-[1.05] tracking-tight">
@@ -263,20 +271,20 @@ function Hero() {
             <br />
             slow living.
           </h1>
-          <p className="mt-6 max-w-md text-base text-neutral-600 dark:text-neutral-400">
+          <p className="mt-6 max-w-md text-base text-stone-600 dark:text-stone-400">
             A small batch of considered objects for the home — woven, thrown,
             and turned by hand in our Bristol studio.
           </p>
           <div className="mt-8 flex items-center gap-3">
-            <span className="inline-flex h-10 items-center rounded-full bg-neutral-900 px-5 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+            <span className="inline-flex h-10 items-center rounded-full bg-stone-900 px-5 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900">
               Shop the collection
             </span>
-            <span className="inline-flex h-10 items-center rounded-full border border-neutral-300 px-5 text-sm font-medium text-neutral-900 dark:border-neutral-700 dark:text-neutral-100">
+            <span className="inline-flex h-10 items-center rounded-full border border-stone-300 px-5 text-sm font-medium text-stone-900 dark:border-stone-700 dark:text-stone-100">
               Read the lookbook
             </span>
           </div>
         </div>
-        <div className="aspect-[4/5] overflow-hidden rounded-md bg-neutral-100 dark:bg-neutral-900">
+        <div className="aspect-[4/5] overflow-hidden rounded-md bg-stone-100 dark:bg-stone-900">
           <ProductImage seed="homepage-hero" alt="" />
         </div>
       </div>
@@ -292,13 +300,13 @@ function FeaturedGrid({
   products: Array<{ id: string; name: string; price: string; seed: string }>
 }) {
   return (
-    <section className="border-b border-neutral-200/80 dark:border-neutral-800/80">
+    <section className="border-b border-stone-200/80 dark:border-stone-800/80">
       <div className="mx-auto max-w-6xl px-8 py-16">
         <div className="mb-10 flex items-end justify-between">
           <h2 className="font-heading text-3xl font-semibold tracking-tight">
             {title}
           </h2>
-          <span className="text-sm text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-400">
+          <span className="text-sm text-stone-600 underline-offset-4 hover:underline dark:text-stone-400">
             Shop all
           </span>
         </div>
@@ -319,15 +327,15 @@ function ProductCard({
 }) {
   return (
     <article className="group/card flex flex-col gap-3">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-neutral-100 dark:bg-neutral-900">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-stone-100 dark:bg-stone-900">
         <ProductImage seed={product.seed} alt="" />
-        <span className="absolute top-3 right-3 inline-flex size-7 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm/10 dark:bg-neutral-900/80 dark:text-neutral-300">
+        <span className="absolute top-3 right-3 inline-flex size-7 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm/10 dark:bg-stone-900/80 dark:text-stone-300">
           <Heart className="size-3.5" />
         </span>
       </div>
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm font-medium leading-tight">{product.name}</p>
-        <p className="text-sm tabular-nums text-neutral-600 dark:text-neutral-400">
+        <p className="text-sm tabular-nums text-stone-600 dark:text-stone-400">
           {product.price}
         </p>
       </div>
@@ -337,7 +345,7 @@ function ProductCard({
 
 function LifestyleBanner() {
   return (
-    <section className="relative border-b border-neutral-200/80 dark:border-neutral-800/80">
+    <section className="relative border-b border-stone-200/80 dark:border-stone-800/80">
       <div className="relative mx-auto max-w-6xl px-8 py-16">
         <div className="relative aspect-[16/7] overflow-hidden rounded-md">
           <ProductImage seed="studio-spring" alt="" className="object-cover" />
@@ -353,7 +361,7 @@ function LifestyleBanner() {
               Every piece begins with a material — linen from Lithuania, brass
               from Birmingham, clay from a quarry an hour from the studio.
             </p>
-            <span className="mt-6 inline-flex h-10 w-fit items-center rounded-full bg-white px-5 text-sm font-medium text-neutral-900">
+            <span className="mt-6 inline-flex h-10 w-fit items-center rounded-full bg-white px-5 text-sm font-medium text-stone-900">
               About the studio
             </span>
           </div>
@@ -365,23 +373,23 @@ function LifestyleBanner() {
 
 function Newsletter() {
   return (
-    <section className="border-b border-neutral-200/80 bg-neutral-50 dark:border-neutral-800/80 dark:bg-neutral-900/40">
+    <section className="border-b border-stone-200/80 bg-[#ebdfc4] dark:border-stone-800/80 dark:bg-[#251f17]">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-12 px-8 py-16">
         <div>
           <h3 className="font-heading text-2xl font-semibold tracking-tight">
             Field notes, monthly.
           </h3>
-          <p className="mt-3 max-w-md text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mt-3 max-w-md text-sm text-stone-600 dark:text-stone-400">
             New pieces, restocks, and the occasional behind-the-scenes from the
             studio. No tracking pixels, no second emails.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex h-12 flex-1 items-center gap-3 rounded-full border border-neutral-300 bg-white px-5 text-sm text-neutral-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-400">
+          <div className="flex h-12 flex-1 items-center gap-3 rounded-full border border-stone-300 bg-white px-5 text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-400">
             <Mail className="size-4" />
             you@example.com
           </div>
-          <span className="inline-flex h-12 items-center rounded-full bg-neutral-900 px-6 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+          <span className="inline-flex h-12 items-center rounded-full bg-stone-900 px-6 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900">
             Subscribe
           </span>
         </div>
@@ -391,15 +399,20 @@ function Newsletter() {
 }
 
 function SiteFooter() {
+  // Deep warm brown anchors the bottom of the page and reinforces the
+  // brand palette — the rest of the homepage is light cream / stone, so
+  // the footer doubles as a definite "end of site" affordance.
   return (
-    <footer className="bg-white dark:bg-neutral-950">
+    <footer className="bg-[#2a221a] text-stone-200">
       <div className="mx-auto grid max-w-6xl grid-cols-4 gap-8 px-8 py-14 text-sm">
         <div>
-          <div className="font-heading text-lg font-semibold">Studio Park</div>
-          <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+          <div className="font-heading text-lg font-semibold text-white">
+            Studio Park
+          </div>
+          <p className="mt-3 text-xs text-stone-400">
             Considered objects for the home, made in Bristol since 2019.
           </p>
-          <div className="mt-4 flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-400">
+          <div className="mt-4 flex items-center gap-4 text-xs text-stone-400">
             <span>@studiopark</span>
             <span>Newsletter</span>
           </div>
@@ -408,8 +421,8 @@ function SiteFooter() {
         <FooterColumn label="Studio" items={["About", "Journal", "Stockists", "Contact"]} />
         <FooterColumn label="Help" items={["Shipping", "Returns", "Care guides", "FAQ"]} />
       </div>
-      <div className="border-t border-neutral-200/80 dark:border-neutral-800/80">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-5 text-xs text-neutral-500 dark:text-neutral-400">
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-5 text-xs text-stone-400">
           <span>© 2026 Studio Park Ltd.</span>
           <span>Made with WordPress</span>
         </div>
@@ -421,10 +434,10 @@ function SiteFooter() {
 function FooterColumn({ label, items }: { label: string; items: string[] }) {
   return (
     <div>
-      <div className="text-xs font-medium uppercase tracking-[0.14em] text-neutral-500 dark:text-neutral-400">
+      <div className="text-xs font-medium uppercase tracking-[0.14em] text-stone-400">
         {label}
       </div>
-      <ul className="mt-3 space-y-2 text-neutral-700 dark:text-neutral-300">
+      <ul className="mt-3 space-y-2 text-stone-200">
         {items.map((item) => (
           <li key={item}>{item}</li>
         ))}
