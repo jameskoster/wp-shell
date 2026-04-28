@@ -4,8 +4,8 @@ import { refKey } from "@/contexts/url"
 import { adminRecipe } from "@/recipes/admin"
 import {
   CANONICAL_COLS,
-  SIZE_TO_CELLS,
   reorderArray,
+  resolveWidgetSize,
 } from "@/widgets/grid/canonicalGrid"
 import type {
   CellSize,
@@ -13,8 +13,9 @@ import type {
   NavItem,
   NavWidget,
   PinnedItem,
-  WidgetSize,
+  WidgetDef,
 } from "@/widgets/types"
+import { slotToWidget } from "@/widgets/slotToWidget"
 
 export type { PinnedItem, DashboardSlot } from "@/widgets/types"
 
@@ -127,8 +128,13 @@ function navItemFor(action: ContextRef): NavItem | undefined {
   return allNavItems().find((i) => refKey(i.action) === key)
 }
 
-function cellsForSize(size: WidgetSize | undefined): CellSize {
-  return SIZE_TO_CELLS[size ?? "md"]
+/**
+ * Lower-bound floor for the slot's footprint. Mirrors `applyResizeDelta`'s
+ * default — widgets without a declared `minSize` collapse to 1×1.
+ */
+function minSizeFor(widget: WidgetDef | null): CellSize {
+  if (!widget?.minSize) return { w: 1, h: 1 }
+  return { w: widget.minSize.w, h: widget.minSize.h }
 }
 
 /**
@@ -156,11 +162,17 @@ function seedFromRecipe(): {
   const dock: PinnedItem[] = []
 
   for (const w of adminRecipe.widgets) {
-    if (w.kind !== "info" && w.kind !== "analytics") continue
+    if (
+      w.kind !== "info" &&
+      w.kind !== "analytics" &&
+      w.kind !== "site-preview"
+    ) {
+      continue
+    }
     dashboardOrder.push({
       kind: "recipe",
       widgetId: w.id,
-      size: cellsForSize(w.size),
+      size: resolveWidgetSize(w.size),
     })
   }
 
@@ -343,9 +355,10 @@ export const usePlacement = create<PlacementState>((set, get) => {
       // Launch tiles can't resize — silently ignore so the DnD layer
       // doesn't have to special-case the affordance.
       if (isLaunchSlot(slot)) return
+      const min = minSizeFor(slotToWidget(slot))
       const nextSize: CellSize = {
-        w: Math.max(1, Math.min(size.w, CANONICAL_COLS)),
-        h: Math.max(1, size.h),
+        w: Math.max(min.w, Math.min(size.w, CANONICAL_COLS)),
+        h: Math.max(min.h, size.h),
       }
       if (slot.size.w === nextSize.w && slot.size.h === nextSize.h) return
       const next = updateSlotById(state.dashboardOrder, id, (s) => ({
@@ -361,7 +374,9 @@ export const usePlacement = create<PlacementState>((set, get) => {
       if (!state.hiddenWidgetIds.includes(id)) return
       const recipeWidget = adminRecipe.widgets.find((w) => w.id === id)
       const isRecipeWidget =
-        recipeWidget?.kind === "info" || recipeWidget?.kind === "analytics"
+        recipeWidget?.kind === "info" ||
+        recipeWidget?.kind === "analytics" ||
+        recipeWidget?.kind === "site-preview"
       if (!isRecipeWidget) {
         // Defensive — only recipe widgets land in hiddenWidgetIds, but
         // if something stale is in there, clear it without trying to
@@ -378,7 +393,7 @@ export const usePlacement = create<PlacementState>((set, get) => {
           {
             kind: "recipe",
             widgetId: id,
-            size: cellsForSize(recipeWidget.size),
+            size: resolveWidgetSize(recipeWidget.size),
           },
         ],
       })

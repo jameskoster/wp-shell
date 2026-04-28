@@ -211,6 +211,12 @@ type DragMeta =
       slotId: string
       originalRect: GridRect
       edge: ResizeEdge
+      /**
+       * Lower bound on the resized footprint, copied from the widget
+       * def at drag start. Read by `applyResizeDelta` so the floor is
+       * authored with the widget rather than hard-coded to 1×1.
+       */
+      minSize: CellSize
     }
   | {
       kind: "dock-move"
@@ -270,11 +276,15 @@ function cursorFromEvent(
  * Apply a cell-delta to the appropriate edges of `rect` based on which
  * resize handle was grabbed. West / north edges shift the origin AND
  * adjust the size; east / south edges only adjust size. Min dimension
- * is 1×1; the caller is expected to clamp horizontally afterwards.
+ * defaults to 1×1 but a widget can declare a larger floor via
+ * `minSize`; the caller is expected to clamp horizontally afterwards.
  *
  * The `Math.min(col + w - 1, …)` bookend on the west/north paths
  * prevents the moving edge from crossing the opposite edge — a fully
- * collapsed rect would otherwise flip its sign.
+ * collapsed rect would otherwise flip its sign. With a larger
+ * `minSize.w/h`, the bookend uses `(opposite edge) - (minSize - 1)` so
+ * the shrinking edge stops at the floor rather than at the opposite
+ * edge.
  */
 function applyResizeDelta(
   rect: GridRect,
@@ -282,25 +292,35 @@ function applyResizeDelta(
   deltaCol: number,
   deltaRow: number,
   cols: number,
+  minSize: CellSize = { w: 1, h: 1 },
 ): GridRect {
   let { col, row, w, h } = rect
+  const minW = Math.max(1, Math.min(minSize.w, cols))
+  const minH = Math.max(1, minSize.h)
   if (edge.includes("e")) {
-    w = Math.max(1, Math.min(cols - col, w + deltaCol))
+    w = Math.max(minW, Math.min(cols - col, w + deltaCol))
   }
   if (edge.includes("w")) {
     const oldCol = col
-    const newCol = Math.max(0, Math.min(col + w - 1, col + deltaCol))
+    // Cap the new origin so that `w` never drops below `minW`.
+    const newCol = Math.max(
+      0,
+      Math.min(col + w - minW, col + deltaCol),
+    )
     col = newCol
-    w = Math.max(1, w - (newCol - oldCol))
+    w = Math.max(minW, w - (newCol - oldCol))
   }
   if (edge.includes("s")) {
-    h = Math.max(1, h + deltaRow)
+    h = Math.max(minH, h + deltaRow)
   }
   if (edge.includes("n")) {
     const oldRow = row
-    const newRow = Math.max(0, Math.min(row + h - 1, row + deltaRow))
+    const newRow = Math.max(
+      0,
+      Math.min(row + h - minH, row + deltaRow),
+    )
     row = newRow
-    h = Math.max(1, h - (newRow - oldRow))
+    h = Math.max(minH, h - (newRow - oldRow))
   }
   return { col, row, w, h }
 }
@@ -363,11 +383,15 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
       const widget = slotToWidget(packedSlot)
       if (!widget) return
       const originalRect = packedSlot.rect
+      const minSize: CellSize = widget.minSize
+        ? { w: widget.minSize.w, h: widget.minSize.h }
+        : { w: 1, h: 1 }
       dragMetaRef.current = {
         kind: "resize",
         slotId: parsed.slotId,
         originalRect,
         edge: parsed.edge,
+        minSize,
       }
       setActiveDrag({
         active: { id, surface: "dashboard", rawId: parsed.slotId },
@@ -531,6 +555,7 @@ export function CustomizeDnd({ children }: { children: ReactNode }) {
         deltaCol,
         deltaRow,
         geometry.cols,
+        meta.minSize,
       )
       const nextSize: CellSize = { w: candidate.w, h: candidate.h }
 

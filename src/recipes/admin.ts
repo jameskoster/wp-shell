@@ -15,6 +15,7 @@ import {
   Mail,
   Megaphone,
   MessageSquare,
+  MonitorSmartphone,
   Newspaper,
   Package,
   Palette,
@@ -99,6 +100,23 @@ export const adminRecipe: Recipe = {
   id: "admin",
   role: "Solo store owner",
   widgets: [
+    {
+      // Live preview of the storefront homepage, anchoring the
+      // dashboard. Renders the same `Canvas` the editor renders (with
+      // `doc.isFrontPage` → eCommerce homepage layout), scaled to fit
+      // the cell. Authored with an explicit footprint (`{ w: 6, h: 4 }`)
+      // because none of the named WidgetSize presets are large enough
+      // for a legible site preview, and a `minSize` floor so the
+      // thumbnail never collapses below readable.
+      id: "site-preview",
+      kind: "site-preview",
+      title: "View site",
+      icon: MonitorSmartphone,
+      size: { w: 6, h: 4 },
+      minSize: { w: 3, h: 2 },
+      action: { type: "editor", title: "Appearance" },
+      caption: "studiopark.example",
+    },
     {
       id: "metric-revenue",
       kind: "analytics",

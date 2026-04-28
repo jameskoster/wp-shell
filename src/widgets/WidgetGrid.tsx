@@ -10,6 +10,7 @@ import { LaunchTile } from "./LaunchTile"
 import { InfoWidget } from "./InfoWidget"
 import { AnalyticsWidget } from "./AnalyticsWidget"
 import { NavWidget } from "./NavWidget"
+import { SitePreviewWidget } from "./SitePreviewWidget"
 import { pack, rectToWidgetSize } from "./grid/canonicalGrid"
 import { useGridGeometry } from "./grid/useGridGeometry"
 import { ResizeHandles } from "./grid/ResizeHandles"
@@ -34,7 +35,15 @@ export const DASHBOARD_DROPPABLE_ID = "dashboard-grid"
  * layout, etc.); the rect controls the actual cell allocation.
  */
 export function renderWidget(w: WidgetDef, sizeOverride?: WidgetSize) {
-  const size: WidgetSize = sizeOverride ?? w.size ?? "md"
+  // `w.size` may be a named preset OR an explicit `{ w, h }` cell
+  // footprint. The internal density token only makes sense for the
+  // preset form; explicit-size widgets (Site Preview) ignore the
+  // density branch entirely, so falling back to "md" is fine — the
+  // actual cell allocation is always controlled by the slot's `size`
+  // and packed rect, never by this token.
+  const presetSize: WidgetSize | undefined =
+    typeof w.size === "string" ? w.size : undefined
+  const size: WidgetSize = sizeOverride ?? presetSize ?? "md"
   switch (w.kind) {
     case "launch":
       return <LaunchTile widget={w} size={size} />
@@ -44,6 +53,8 @@ export function renderWidget(w: WidgetDef, sizeOverride?: WidgetSize) {
       return <AnalyticsWidget widget={w} size={size} />
     case "nav":
       return <NavWidget widget={w} size={size} />
+    case "site-preview":
+      return <SitePreviewWidget widget={w} />
   }
 }
 

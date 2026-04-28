@@ -19,6 +19,7 @@ import type {
   InfoWidget,
   NavItem,
   NavWidget,
+  SitePreviewWidget,
 } from "@/widgets/types"
 
 type AddableLaunch = {
@@ -27,8 +28,8 @@ type AddableLaunch = {
 }
 
 type AddableRecipe = {
-  kind: "info" | "analytics"
-  widget: InfoWidget | AnalyticsWidget
+  kind: "info" | "analytics" | "site-preview"
+  widget: InfoWidget | AnalyticsWidget | SitePreviewWidget
 }
 
 type AddableSection = {
@@ -79,9 +80,19 @@ function useAddable(): {
       )
       .map((widget) => ({ kind: "analytics" as const, widget }))
 
+    const previewAddables: AddableRecipe[] = adminRecipe.widgets
+      .filter(
+        (w): w is SitePreviewWidget =>
+          w.kind === "site-preview" && hiddenSet.has(w.id),
+      )
+      .map((widget) => ({ kind: "site-preview" as const, widget }))
+
     const sections: AddableSection[] = []
     if (launchAddables.length > 0) {
       sections.push({ label: "Launch tiles", items: launchAddables })
+    }
+    if (previewAddables.length > 0) {
+      sections.push({ label: "Site", items: previewAddables })
     }
     if (infoAddables.length > 0) {
       sections.push({ label: "Information", items: infoAddables })
@@ -91,7 +102,10 @@ function useAddable(): {
     }
 
     const totalCount =
-      launchAddables.length + infoAddables.length + analyticsAddables.length
+      launchAddables.length +
+      previewAddables.length +
+      infoAddables.length +
+      analyticsAddables.length
     return { sections, totalCount }
   }, [dashboardOrder, dock, hiddenWidgetIds])
 }
@@ -163,7 +177,9 @@ function SectionGroup({
   section: AddableSection
   showSeparatorAbove: boolean
   onAddLaunch: (navItem: NavItem) => void
-  onAddRecipe: (widget: InfoWidget | AnalyticsWidget) => void
+  onAddRecipe: (
+    widget: InfoWidget | AnalyticsWidget | SitePreviewWidget,
+  ) => void
 }) {
   return (
     <>

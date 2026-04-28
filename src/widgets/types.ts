@@ -15,7 +15,22 @@ export type WidgetBase = {
   id: string
   title: string
   icon?: LucideIcon
-  size?: WidgetSize
+  /**
+   * Authored cell footprint. Either a named preset (`WidgetSize`) for
+   * the common cases, or an explicit `{ w, h }` for widgets that need
+   * a footprint the preset table doesn't cover (e.g. Site Preview's
+   * 6×4 default). Resolved to cells via `resolveWidgetSize` at seed
+   * time; after that the slot's `size` is the only source of truth.
+   */
+  size?: WidgetSize | CellSize
+  /**
+   * Lower bound on the slot's footprint, enforced by the resize
+   * gesture and `resizeWidget`. Lets a widget declare "I'm illegible
+   * below this size" — Site Preview, for example, sets `{ w: 3, h: 2 }`
+   * so the homepage thumbnail never collapses to an unreadable strip.
+   * Defaults to `{ w: 1, h: 1 }` when omitted.
+   */
+  minSize?: CellSize
   source?: string
 }
 
@@ -91,11 +106,28 @@ export type NavWidget = Omit<WidgetBase, "title"> & {
   items: NavItem[]
 }
 
+/**
+ * A live preview of the site's homepage. Renders the same editor
+ * `Canvas` the workspace renders (so the preview can't drift from the
+ * "real" thing), scaled to fit the cell. Clicking anywhere opens
+ * `action` — typically the Appearance / Editor workspace landed on the
+ * homepage. Bespoke: ignores the `WidgetSize` density tokens, defaults
+ * to a large `{ w: 6, h: 4 }` footprint, and declares a `minSize` so
+ * the preview never collapses below readable.
+ */
+export type SitePreviewWidget = WidgetBase & {
+  kind: "site-preview"
+  action: ContextRef
+  /** Optional caption rendered in the title bar (e.g. the site URL). */
+  caption?: string
+}
+
 export type WidgetDef =
   | LaunchTileWidget
   | InfoWidget
   | AnalyticsWidget
   | NavWidget
+  | SitePreviewWidget
 
 export type Recipe = {
   id: string

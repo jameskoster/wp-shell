@@ -28,6 +28,30 @@ export const SIZE_TO_CELLS: Record<WidgetSize, CellSize> = {
 }
 
 /**
+ * Type guard for the explicit-cell-size form of `WidgetBase.size`.
+ * Authored widgets may either name a preset (`'lg'`, `'hero'`, …) or
+ * supply an explicit `{ w, h }` for footprints the preset table
+ * doesn't cover.
+ */
+function isCellSize(size: WidgetSize | CellSize): size is CellSize {
+  return typeof size === "object" && size !== null && "w" in size
+}
+
+/**
+ * Resolve `WidgetBase.size` (preset OR explicit `{ w, h }`) to a
+ * concrete cell footprint, defaulting to `'md'` when omitted. Used at
+ * seed time and by `unhideWidget` so authored sizes survive a hide /
+ * unhide round-trip.
+ */
+export function resolveWidgetSize(
+  size: WidgetSize | CellSize | undefined,
+): CellSize {
+  if (size === undefined) return SIZE_TO_CELLS.md
+  if (isCellSize(size)) return { w: size.w, h: size.h }
+  return SIZE_TO_CELLS[size]
+}
+
+/**
  * Inverse of `SIZE_TO_CELLS` — derives a content-density token from
  * the rect's actual cell footprint. Used by `WidgetGrid` to keep the
  * widget renderers' internal `size` switch (item count, header layout,

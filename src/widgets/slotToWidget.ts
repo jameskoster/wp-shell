@@ -35,6 +35,10 @@ export function slotToWidget(slot: DashboardSlot): WidgetDef | null {
   }
   const recipe = adminRecipe.widgets.find((w) => w.id === slot.widgetId)
   if (!recipe) return null
+  // Nav widgets aren't rendered into the grid (they seed the dock /
+  // launch tiles instead) and launch tiles only appear via the pinned
+  // branch above. Everything else — info, analytics, site-preview —
+  // renders directly.
   if (recipe.kind === "nav" || recipe.kind === "launch") return null
   return recipe
 }
