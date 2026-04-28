@@ -27,6 +27,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react"
+import { ORDERS } from "@/mocks/orders"
 import { PAGES } from "@/mocks/pages"
 import { renderQuickDraft } from "@/widgets/QuickDraftForm"
 import { renderSiteHealth } from "@/widgets/SiteHealthMeter"
@@ -50,6 +51,20 @@ const RECENT_PAGES: Array<{ id: string; seed?: string }> = [
   { id: "ceramics-restock" },
   { id: "contact", seed: "contact-page" },
 ]
+
+// Mirror the orders workspace: derive the Recent orders widget straight
+// from the ORDERS mock so each row links to a real order in the
+// workspace (rather than drifting from invented #1284-style numbers).
+const recentOrderItems: InfoListItem[] = ORDERS.slice(0, 10).map((order) => ({
+  id: order.id,
+  title: `${order.number} — ${order.customer}`,
+  meta: `${order.total} · ${order.date}`,
+  thumbnail: { kind: "avatar", name: order.customer },
+  action: {
+    type: "orders",
+    params: { view: "all", id: order.id },
+  },
+}))
 
 const jumpBackInItems: InfoListItem[] = RECENT_PAGES.flatMap(({ id, seed }) => {
   const page = PAGES.find((p) => p.id === id)
@@ -124,68 +139,7 @@ export const adminRecipe: Recipe = {
       title: "Recent orders",
       icon: ShoppingBag,
       size: "wide",
-      items: [
-        {
-          id: "o1",
-          title: "#1284 — Sarah Kowalski",
-          meta: "$129.00 · 2m ago",
-          thumbnail: { kind: "avatar", name: "Sarah Kowalski" },
-        },
-        {
-          id: "o2",
-          title: "#1283 — Marco Delgado",
-          meta: "$48.00 · 38m ago",
-          thumbnail: { kind: "avatar", name: "Marco Delgado" },
-        },
-        {
-          id: "o3",
-          title: "#1282 — Anya Petrova",
-          meta: "$210.00 · 1h ago",
-          thumbnail: { kind: "avatar", name: "Anya Petrova" },
-        },
-        {
-          id: "o4",
-          title: "#1281 — Lee Harper",
-          meta: "$76.00 · 2h ago",
-          thumbnail: { kind: "avatar", name: "Lee Harper" },
-        },
-        {
-          id: "o5",
-          title: "#1280 — Jess Maru",
-          meta: "$94.00 · 3h ago",
-          thumbnail: { kind: "avatar", name: "Jess Maru" },
-        },
-        {
-          id: "o6",
-          title: "#1279 — Tomás Reyes",
-          meta: "$162.00 · 5h ago",
-          thumbnail: { kind: "avatar", name: "Tomás Reyes" },
-        },
-        {
-          id: "o7",
-          title: "#1278 — Priya Nair",
-          meta: "$58.00 · Yesterday",
-          thumbnail: { kind: "avatar", name: "Priya Nair" },
-        },
-        {
-          id: "o8",
-          title: "#1277 — Connor Boyle",
-          meta: "$245.00 · Yesterday",
-          thumbnail: { kind: "avatar", name: "Connor Boyle" },
-        },
-        {
-          id: "o9",
-          title: "#1276 — Hannah Liang",
-          meta: "$112.00 · 2d ago",
-          thumbnail: { kind: "avatar", name: "Hannah Liang" },
-        },
-        {
-          id: "o10",
-          title: "#1275 — Felix Adeyemi",
-          meta: "$36.00 · 2d ago",
-          thumbnail: { kind: "avatar", name: "Felix Adeyemi" },
-        },
-      ],
+      items: recentOrderItems,
     },
     {
       id: "info-low-stock",

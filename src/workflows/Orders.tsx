@@ -13,7 +13,6 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -37,6 +36,7 @@ import {
 import { ContextHeader } from "@/shell/ContextHeader"
 import { ContextLayout } from "@/shell/ContextLayout"
 import { ContextSubnav } from "@/shell/ContextSubnav"
+import { Thumbnail } from "@/widgets/Thumbnail"
 import { useContexts } from "@/contexts/store"
 import type { Context } from "@/contexts/types"
 import {
@@ -64,16 +64,6 @@ const VIEWS: Array<{ key: OrdersView; label: string; icon: LucideIcon }> = [
 
 function isView(value: unknown): value is OrdersView {
   return VIEWS.some((v) => v.key === value)
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((part) => part[0] ?? "")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
 }
 
 export function Orders({ ctx }: { ctx: Context }) {
@@ -285,11 +275,9 @@ function OrdersList({
                         onClick={() => onOpenOrder(order.id)}
                         className="flex items-center gap-3 text-start leading-snug outline-none transition-colors hover:text-primary focus-visible:text-primary"
                       >
-                        <Avatar className="size-9" aria-hidden="true">
-                          <AvatarFallback className="text-sm font-medium text-muted-foreground">
-                            {initials(order.customer)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <Thumbnail
+                          thumbnail={{ kind: "avatar", name: order.customer }}
+                        />
                         <div className="min-w-0">
                           <span className="font-medium">{order.customer}</span>
                           <span className="mt-1 block text-muted-foreground">
