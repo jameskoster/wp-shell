@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BarChart3,
   CalendarDays,
+  DatabaseBackup,
   DollarSign,
   Eye,
   FileText,
@@ -11,6 +12,7 @@ import {
   History,
   Image,
   LineChart,
+  Mail,
   Megaphone,
   MessageSquare,
   Newspaper,
@@ -22,13 +24,16 @@ import {
   Search,
   Settings,
   ShoppingBag,
+  ShoppingCart,
   Star,
   TrendingUp,
+  Trophy,
   Users,
   Wrench,
 } from "lucide-react"
 import { ORDERS } from "@/mocks/orders"
 import { PAGES } from "@/mocks/pages"
+import { renderBackups } from "@/widgets/BackupStatus"
 import { renderQuickDraft } from "@/widgets/QuickDraftForm"
 import { renderSiteHealth } from "@/widgets/SiteHealthMeter"
 import type { InfoListItem, Recipe } from "@/widgets/types"
@@ -199,6 +204,147 @@ export const adminRecipe: Recipe = {
       ],
     },
     {
+      id: "info-abandoned-carts",
+      kind: "info",
+      title: "Abandoned carts",
+      icon: ShoppingCart,
+      size: "lg",
+      items: [
+        {
+          id: "ac1",
+          title: "Hannah Wexler",
+          meta: "$148.50 · 12m ago",
+          thumbnail: { kind: "avatar", name: "Hannah Wexler" },
+          action: { type: "orders" },
+        },
+        {
+          id: "ac2",
+          title: "Theo Bennett",
+          meta: "$76.00 · 38m ago",
+          thumbnail: { kind: "avatar", name: "Theo Bennett" },
+          action: { type: "orders" },
+        },
+        {
+          id: "ac3",
+          title: "Maya Lin",
+          meta: "$210.00 · 1h ago",
+          thumbnail: { kind: "avatar", name: "Maya Lin" },
+          action: { type: "orders" },
+        },
+        {
+          id: "ac4",
+          title: "Ben Mosesowitz",
+          meta: "$54.00 · 3h ago",
+          thumbnail: { kind: "avatar", name: "Ben Mosesowitz" },
+          action: { type: "orders" },
+        },
+        {
+          id: "ac5",
+          title: "Iris Caldwell",
+          meta: "$92.00 · 5h ago",
+          thumbnail: { kind: "avatar", name: "Iris Caldwell" },
+          action: { type: "orders" },
+        },
+      ],
+    },
+    {
+      id: "info-best-sellers",
+      kind: "info",
+      title: "Best sellers",
+      icon: Trophy,
+      size: "wide",
+      items: [
+        {
+          id: "bs1",
+          title: "Linen tote — natural",
+          meta: "84 sold · $2,520 this week",
+          thumbnail: { kind: "image", seed: "linen-tote-natural" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs2",
+          title: "Ceramic mug — sage",
+          meta: "62 sold · $1,240 this week",
+          thumbnail: { kind: "image", seed: "ceramic-mug-sage" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs3",
+          title: "Brass lamp — small",
+          meta: "48 sold · $1,920 this week",
+          thumbnail: { kind: "image", seed: "brass-lamp-small" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs4",
+          title: "Beeswax candle — amber",
+          meta: "44 sold · $660 this week",
+          thumbnail: { kind: "image", seed: "beeswax-candle-amber" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs5",
+          title: "Wool throw — charcoal",
+          meta: "31 sold · $1,860 this week",
+          thumbnail: { kind: "image", seed: "wool-throw-charcoal" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs6",
+          title: "Cotton scarf — sand",
+          meta: "27 sold · $810 this week",
+          thumbnail: { kind: "image", seed: "cotton-scarf-sand" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs7",
+          title: "Reed diffuser — fig",
+          meta: "22 sold · $440 this week",
+          thumbnail: { kind: "image", seed: "reed-diffuser-fig" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "bs8",
+          title: "Walnut tray — large",
+          meta: "18 sold · $1,080 this week",
+          thumbnail: { kind: "image", seed: "walnut-tray-large" },
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+      ],
+    },
+    {
       id: "info-reviews",
       kind: "info",
       title: "New reviews",
@@ -256,6 +402,48 @@ export const adminRecipe: Recipe = {
       ],
     },
     {
+      id: "info-pending-comments",
+      kind: "info",
+      title: "Pending comments",
+      icon: MessageSquare,
+      size: "lg",
+      items: [
+        {
+          id: "pc1",
+          title: "Sarah K. on “Spring collection lookbook”",
+          meta: "“Will the linen tote be back in cream?”",
+          thumbnail: { kind: "avatar", name: "Sarah Kim" },
+          action: {
+            type: "edit-page",
+            params: { id: "comments" },
+            title: "Comments",
+          },
+        },
+        {
+          id: "pc2",
+          title: "Marco D. on “How we source linen”",
+          meta: "“Curious about your cotton suppliers — any blog post?”",
+          thumbnail: { kind: "avatar", name: "Marco Davila" },
+          action: {
+            type: "edit-page",
+            params: { id: "comments" },
+            title: "Comments",
+          },
+        },
+        {
+          id: "pc3",
+          title: "Anya P. on “Spring collection lookbook”",
+          meta: "“Just ordered the brass lamp — can't wait!”",
+          thumbnail: { kind: "avatar", name: "Anya Petrov" },
+          action: {
+            type: "edit-page",
+            params: { id: "comments" },
+            title: "Comments",
+          },
+        },
+      ],
+    },
+    {
       id: "info-jump-back-in",
       kind: "info",
       title: "Jump back in",
@@ -280,6 +468,14 @@ export const adminRecipe: Recipe = {
       render: renderSiteHealth,
     },
     {
+      id: "info-backups",
+      kind: "info",
+      title: "Backups",
+      icon: DatabaseBackup,
+      size: "lg",
+      render: renderBackups,
+    },
+    {
       id: "info-yoast-seo",
       kind: "info",
       title: "Yoast SEO Posts Overview",
@@ -291,6 +487,19 @@ export const adminRecipe: Recipe = {
         { id: "y3", title: "Posts with problems", meta: "3" },
         { id: "y4", title: "Posts without a focus keyphrase", meta: "5" },
       ],
+    },
+    {
+      id: "metric-subscribers",
+      kind: "analytics",
+      title: "Subscribers",
+      icon: Mail,
+      size: "lg",
+      metric: {
+        value: "1,284",
+        delta: { value: "+18", trend: "up" },
+        sparkline: [1166, 1182, 1198, 1224, 1248, 1266, 1284],
+        caption: "Last 7 days",
+      },
     },
     {
       id: "metric-jetpack-views",

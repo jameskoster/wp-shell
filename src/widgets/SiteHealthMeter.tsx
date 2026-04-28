@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Plug } from "lucide-react"
 import { useContexts } from "@/contexts/store"
 import type { ContextRef } from "@/contexts/types"
 
@@ -20,6 +20,15 @@ type SiteHealthMeterProps = {
   status?: string
   action?: ContextRef
   linkLabel?: string
+  /**
+   * Optional pending-update count rolled into the same widget. When > 0,
+   * a separate clickable line surfaces the count and routes to the
+   * Plugins workspace, where the user can apply the updates. Updates
+   * intentionally share real estate with Site Health because the JTBD
+   * is the same — "is there site maintenance I should do right now?".
+   */
+  updates?: number
+  updatesAction?: ContextRef
 }
 
 export function SiteHealthMeter({
@@ -32,6 +41,12 @@ export function SiteHealthMeter({
     title: "Site Health",
   },
   linkLabel = "View details",
+  updates,
+  updatesAction = {
+    type: "edit-page",
+    params: { id: "plugins" },
+    title: "Plugins",
+  },
 }: SiteHealthMeterProps) {
   const open = useContexts((s) => s.open)
   const pct = Math.max(0, Math.min(1, score / total))
@@ -104,6 +119,18 @@ export function SiteHealthMeter({
       </div>
       <div className="flex flex-col items-center gap-1">
         <span className="text-xs font-medium">{resolvedStatus}</span>
+        {updates && updates > 0 ? (
+          <button
+            type="button"
+            onClick={(e) =>
+              open(updatesAction, e.currentTarget.getBoundingClientRect())
+            }
+            className="inline-flex items-center gap-1 rounded-sm text-xs text-warning-foreground outline-none transition-colors hover:underline focus-visible:underline"
+          >
+            <Plug className="size-3" />
+            {updates} update{updates === 1 ? "" : "s"} available
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={(e) =>
@@ -128,5 +155,7 @@ export function SiteHealthMeter({
  * unrelated icons like `Globe`).
  */
 export function renderSiteHealth(): ReactNode {
-  return <SiteHealthMeter score={78} status="Should be improved" />
+  return (
+    <SiteHealthMeter score={78} status="Should be improved" updates={2} />
+  )
 }
