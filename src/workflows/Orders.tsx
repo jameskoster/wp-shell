@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import {
   AlertTriangle,
+  ArrowUpRight,
   CheckCircle2,
   Clock,
   MoreHorizontal,
@@ -16,6 +17,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerPanel,
+  DrawerPopup,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import {
   Menu,
@@ -140,6 +151,23 @@ function OrdersList({
 }) {
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [drawerOrderId, setDrawerOrderId] = useState<string | undefined>(
+    undefined
+  )
+  const drawerOrder = drawerOrderId ? getOrder(drawerOrderId) : undefined
+
+  function openDrawer(id: string) {
+    setDrawerOrderId(id)
+  }
+
+  function closeDrawer() {
+    setDrawerOrderId(undefined)
+  }
+
+  function openFullPage(id: string) {
+    setDrawerOrderId(undefined)
+    onOpenOrder(id)
+  }
 
   const visible = useMemo<Order[]>(() => {
     const base = ordersByView(view)
@@ -263,7 +291,7 @@ function OrdersList({
                     <TableCell className="py-3">
                       <button
                         type="button"
-                        onClick={() => onOpenOrder(order.id)}
+                        onClick={() => openDrawer(order.id)}
                         className="font-medium tabular-nums outline-none transition-colors hover:text-primary focus-visible:text-primary"
                       >
                         {order.number}
@@ -272,7 +300,7 @@ function OrdersList({
                     <TableCell className="py-3">
                       <button
                         type="button"
-                        onClick={() => onOpenOrder(order.id)}
+                        onClick={() => openDrawer(order.id)}
                         className="flex items-center gap-3 text-start leading-snug outline-none transition-colors hover:text-primary focus-visible:text-primary"
                       >
                         <Thumbnail
@@ -315,9 +343,13 @@ function OrdersList({
                           }
                         />
                         <MenuPopup align="end">
-                          <MenuItem onClick={() => onOpenOrder(order.id)}>
+                          <MenuItem onClick={() => openDrawer(order.id)}>
                             View details
                           </MenuItem>
+                          <MenuItem onClick={() => onOpenOrder(order.id)}>
+                            Open full page
+                          </MenuItem>
+                          <MenuSeparator />
                           <MenuItem disabled>Mark as completed</MenuItem>
                           <MenuItem disabled>Email customer</MenuItem>
                           <MenuSeparator />
@@ -344,7 +376,100 @@ function OrdersList({
           </Table>
         </div>
       </ScrollArea>
+
+      <OrderDrawer
+        order={drawerOrder}
+        onClose={closeDrawer}
+        onOpenFullPage={openFullPage}
+      />
     </>
+  )
+}
+
+function OrderDrawer({
+  order,
+  onClose,
+  onOpenFullPage,
+}: {
+  order: Order | undefined
+  onClose: () => void
+  onOpenFullPage: (id: string) => void
+}) {
+  const open = order !== undefined
+
+  return (
+    <Drawer
+      position="right"
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose()
+      }}
+    >
+      <DrawerPopup className="max-w-xl">
+        {order ? (
+          <>
+            <DrawerHeader className="border-b">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <DrawerTitle className="tabular-nums">
+                    Order {order.number}
+                  </DrawerTitle>
+                  <DrawerDescription>
+                    {order.customer} · {order.date}
+                  </DrawerDescription>
+                </div>
+                <Badge
+                  variant={STATUS_VARIANT[order.status]}
+                  size="lg"
+                  className="px-2 leading-5"
+                >
+                  {STATUS_LABEL[order.status]}
+                </Badge>
+              </div>
+            </DrawerHeader>
+
+            <DrawerPanel className="space-y-6">
+              <LineItemsCard order={order} />
+              <Card title="Customer">
+                <div className="text-sm font-medium">{order.customer}</div>
+                <div className="text-xs text-muted-foreground">{order.email}</div>
+              </Card>
+              <Card title="Shipping">
+                <Address lines={order.shippingAddress} />
+                <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+                  {order.shippingMethod}
+                </div>
+              </Card>
+              <Card title="Billing">
+                <Address lines={order.billingAddress} />
+                <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+                  {order.paymentMethod}
+                </div>
+              </Card>
+              {order.notes ? (
+                <Card title="Notes">
+                  <p className="text-sm text-muted-foreground">{order.notes}</p>
+                </Card>
+              ) : null}
+            </DrawerPanel>
+
+            <DrawerFooter>
+              <DrawerClose
+                render={
+                  <Button size="sm" variant="outline">
+                    Close
+                  </Button>
+                }
+              />
+              <Button size="sm" onClick={() => onOpenFullPage(order.id)}>
+                <ArrowUpRight />
+                Open full page
+              </Button>
+            </DrawerFooter>
+          </>
+        ) : null}
+      </DrawerPopup>
+    </Drawer>
   )
 }
 
