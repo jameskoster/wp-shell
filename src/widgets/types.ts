@@ -164,6 +164,14 @@ export type SitePreviewWidget = WidgetBase & {
    * field the user changes to swap the page being previewed.
    */
   url?: string
+  /**
+   * Optional override for the embedded canvas's homepage layout.
+   * Recipes don't usually set this — the active site's
+   * `frontPageVariant` is the single source of truth, so the editor
+   * and the dashboard preview always agree. Reserved for future use
+   * cases like previewing an alternate layout from a recipe.
+   */
+  homepageVariant?: "commerce" | "blog" | "publication" | "community"
 }
 
 export type WidgetDef =

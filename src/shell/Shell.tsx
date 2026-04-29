@@ -13,11 +13,13 @@ import {
   useActiveContext,
   useContexts,
 } from "@/contexts/store"
+import { useSite } from "@/stores/siteStore"
 import { CustomizeBar } from "@/workflows/CustomizeBar"
 
 export function Shell() {
   useShortcuts()
   const hydrate = useContexts((s) => s.hydrateFromHash)
+  const hydrateSite = useSite((s) => s.hydrateFromQuery)
   const active = useActiveContext()
   const switcherOpen = useUI((s) => s.overlay === "switcher")
   const goHome = useContexts((s) => s.goHome)
@@ -27,9 +29,12 @@ export function Shell() {
   const canCustomize = useCanCustomize()
 
   useEffect(() => {
+    // Site comes first so the placement store reseeds onto the right
+    // recipe before any context-from-hash gets opened against it.
+    hydrateSite()
     hydrate()
     return bindHashListener()
-  }, [hydrate])
+  }, [hydrate, hydrateSite])
 
   // Auto-exit customize if the viewport shrinks below the supported
   // breakpoint (e.g. user resized the window or rotated a tablet).

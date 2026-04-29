@@ -55,7 +55,8 @@ import {
 } from "@/contexts/store"
 import { NOTIFICATIONS } from "@/mocks/notifications"
 import { USER } from "@/mocks/user"
-import { OTHER_SITES, SITE } from "@/mocks/site"
+import { SITES } from "@/mocks/site"
+import { useActiveSite, useSite } from "@/stores/siteStore"
 import { shortcutLabel } from "./useShortcuts"
 
 export function AdminBar() {
@@ -73,6 +74,8 @@ export function AdminBar() {
   const customizing = useCustomize((s) => s.active)
   const setCustomizing = useCustomize((s) => s.setActive)
   const canCustomize = useCanCustomize()
+  const activeSite = useActiveSite()
+  const setActiveSite = useSite((s) => s.setActiveSite)
 
   const handleGoHome = () => goHomeFromActive(active)
 
@@ -147,16 +150,16 @@ export function AdminBar() {
               variant="ghost"
               size="sm"
               className="gap-2 ps-1.5"
-              aria-label={`Site menu for ${SITE.name}`}
+              aria-label={`Site menu for ${activeSite.name}`}
             >
               <span
                 aria-hidden
-                className={`grid size-5 place-items-center rounded-full text-[10px] font-semibold ${SITE.iconClass}`}
+                className={`grid size-5 place-items-center rounded-full text-[10px] font-semibold ${activeSite.iconClass}`}
               >
-                {SITE.initial}
+                {activeSite.initial}
               </span>
               <span className="hidden max-w-40 truncate font-medium sm:inline">
-                {SITE.name}
+                {activeSite.name}
               </span>
               <ChevronDown className="size-3.5 opacity-72" />
             </Button>
@@ -164,7 +167,7 @@ export function AdminBar() {
         />
         <MenuPopup align="start" className="min-w-56">
           <MenuItem
-            onClick={() => window.open(SITE.url, "_blank", "noreferrer")}
+            onClick={() => window.open(activeSite.url, "_blank", "noreferrer")}
           >
             <span className="flex-1">View site</span>
             <ExternalLink className="size-3.5 opacity-72" />
@@ -360,18 +363,44 @@ export function AdminBar() {
           <MenuSeparator />
           <MenuSub>
             <MenuSubTrigger>Switch site</MenuSubTrigger>
-            <MenuSubPopup className="min-w-56">
-              {OTHER_SITES.map((s) => (
-                <MenuItem key={s.id} disabled>
-                  <span
-                    aria-hidden
-                    className={`grid size-5 place-items-center rounded-full text-[10px] font-semibold ${s.iconClass}`}
-                  >
-                    {s.initial}
-                  </span>
-                  <span className="truncate">{s.name}</span>
-                </MenuItem>
-              ))}
+            <MenuSubPopup className="min-w-64">
+              <MenuRadioGroup
+                value={activeSite.id}
+                onValueChange={(value) => setActiveSite(value as string)}
+              >
+                {SITES.map((s) => {
+                  const comingSoon = s.recipeId === null
+                  return (
+                    <MenuRadioItem
+                      key={s.id}
+                      value={s.id}
+                      disabled={comingSoon}
+                    >
+                      {/*
+                        Wrap the two visual children in a single flex
+                        container — MenuRadioItem renders `children`
+                        inside an inline `col-start-2` span, so two
+                        block-level siblings would stack rather than
+                        sitting side-by-side.
+                      */}
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${s.iconClass}`}
+                        >
+                          {s.initial}
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate text-sm">{s.name}</span>
+                          <span className="truncate text-[11px] text-muted-foreground">
+                            {comingSoon ? `${s.persona} · Coming soon` : s.persona}
+                          </span>
+                        </span>
+                      </span>
+                    </MenuRadioItem>
+                  )
+                })}
+              </MenuRadioGroup>
             </MenuSubPopup>
           </MenuSub>
         </MenuPopup>

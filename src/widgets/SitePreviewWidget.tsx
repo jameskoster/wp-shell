@@ -3,6 +3,7 @@ import { Lock } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
 import { launchKey } from "@/contexts/registry"
+import { useActiveSite } from "@/stores/siteStore"
 import type { SitePreviewWidget as SitePreviewWidgetDef } from "./types"
 import { Canvas, homepageDoc } from "@/workflows/editor/Canvas"
 import { WidgetMenu } from "./WidgetMenu"
@@ -40,20 +41,34 @@ export function SitePreviewWidget({
   widget: SitePreviewWidgetDef
 }) {
   const open = useContexts((s) => s.open)
+  const activeSite = useActiveSite()
   const stageRef = useRef<HTMLDivElement | null>(null)
   const scale = useFitToWidth(stageRef, PREVIEW_SITE_WIDTH)
   const url = widget.url ?? "studiopark.example/"
+  // The site descriptor is the single source of truth for which
+  // homepage layout this site renders — both the preview and the
+  // editor (`resolveDoc`) read from it. The widget keeps an optional
+  // override on its type for future "preview a different page" use
+  // cases, but recipes don't set it today.
+  const variant = widget.homepageVariant ?? activeSite.frontPageVariant
+  // Match the canvas's per-variant page background on the wrapper so a
+  // sub-frame paint never flashes admin-white through the gaps before
+  // the scaled canvas finishes laying out.
+  const stageBg =
+    variant === "blog"
+      ? "bg-[#f6f5f1] dark:bg-[#16171a]"
+      : variant === "publication"
+        ? "bg-[#f7f6f2] dark:bg-[#13141a]"
+        : variant === "community"
+          ? "bg-[#f3ede2] dark:bg-[#1a1612]"
+          : "bg-[#f4ede0] dark:bg-[#1c1813]"
 
   return (
     <Card className="group relative flex h-full flex-col overflow-hidden p-0">
       <AddressBar url={url} widgetId={widget.id} />
       <div
         ref={stageRef}
-        // Warm cream matches the eCommerce homepage's page bg so a
-        // sub-frame paint never flashes admin-white through the gaps;
-        // the canvas itself paints its own background once the scale
-        // lands.
-        className="relative flex-1 overflow-hidden bg-[#f4ede0] transition-transform duration-300 ease-out group-hover:scale-[1.02] group-focus-within:scale-[1.02] dark:bg-[#1c1813]"
+        className={`relative flex-1 overflow-hidden ${stageBg} transition-transform duration-300 ease-out group-hover:scale-[1.02] group-focus-within:scale-[1.02]`}
       >
         <button
           type="button"
@@ -76,7 +91,7 @@ export function SitePreviewWidget({
             transform: `scale(${scale})`,
           }}
         >
-          <Canvas doc={homepageDoc()} />
+          <Canvas doc={homepageDoc(variant)} />
         </div>
       </div>
     </Card>

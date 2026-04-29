@@ -1,7 +1,8 @@
 import { create } from "zustand"
 import type { ContextRef } from "@/contexts/types"
 import { refKey } from "@/contexts/url"
-import { adminRecipe } from "@/recipes/admin"
+import { DEFAULT_RECIPE_ID, recipeFor, type RecipeId } from "@/recipes"
+import { useRecipe } from "@/stores/recipeStore"
 import {
   CANONICAL_COLS,
   reorderArray,
@@ -13,6 +14,7 @@ import type {
   NavItem,
   NavWidget,
   PinnedItem,
+  Recipe,
   WidgetDef,
 } from "@/widgets/types"
 import { slotToWidget } from "@/widgets/slotToWidget"
@@ -95,6 +97,14 @@ type PlacementState = {
    * Used by the Customize bar's "Reset to default" command.
    */
   resetToDefault: () => void
+  /**
+   * Switch the placement store over to a different recipe. Discards
+   * any per-slot customization the user made on the previous recipe
+   * (the prototype's "switching sites = different universe" mental
+   * model). Called by the recipe-store subscription below whenever
+   * `activeRecipeId` changes.
+   */
+  reseed: (recipeId: RecipeId) => void
 }
 
 function pinnedIdFor(action: ContextRef): string {
@@ -112,8 +122,8 @@ function pinnedFromNavItem(item: NavItem): PinnedItem | null {
   }
 }
 
-function allNavItems(): NavItem[] {
-  return adminRecipe.widgets
+function allNavItems(recipe: Recipe): NavItem[] {
+  return recipe.widgets
     .filter((w): w is NavWidget => w.kind === "nav")
     .flatMap((w) => w.items)
 }
@@ -123,9 +133,14 @@ function allNavItems(): NavItem[] {
  * Lets manually-added pins inherit any badge defined on the matching
  * nav item, so they look the same as seeded defaults.
  */
-function navItemFor(action: ContextRef): NavItem | undefined {
+function navItemFor(recipe: Recipe, action: ContextRef): NavItem | undefined {
   const key = refKey(action)
-  return allNavItems().find((i) => refKey(i.action) === key)
+  return allNavItems(recipe).find((i) => refKey(i.action) === key)
+}
+
+/** Resolve the active recipe via the recipe store. */
+function activeRecipe(): Recipe {
+  return recipeFor(useRecipe.getState().activeRecipeId)
 }
 
 /**
@@ -150,39 +165,41 @@ function isLaunchSlot(slot: DashboardSlot): boolean {
   return slot.kind === "pinned"
 }
 
-function seedFromRecipe(): {
+function seedFromRecipe(recipe: Recipe): {
   dashboardOrder: DashboardSlot[]
   dock: PinnedItem[]
 } {
-  // Build slots in seed order. Analytics + info widgets come BEFORE
-  // pinned launch tiles so data-rich widgets occupy the top of the
-  // dashboard and the smaller 1×1 launch tiles for less-prominent
-  // contexts flow underneath. The packer takes it from here.
+  // Walk the recipe in declared order so the recipe's *position* of
+  // the nav widget controls where its dashboard launch tiles seed
+  // (e.g. blogger puts nav between stats and the Recently info widget
+  // to get a stats → tiles → list stack). Recipes whose nav widget
+  // is the last entry — like admin and editorial — keep their
+  // existing behaviour where launch tiles flow underneath all the
+  // info/analytics widgets.
   const dashboardOrder: DashboardSlot[] = []
   const dock: PinnedItem[] = []
 
-  for (const w of adminRecipe.widgets) {
+  for (const w of recipe.widgets) {
     if (
-      w.kind !== "info" &&
-      w.kind !== "analytics" &&
-      w.kind !== "site-preview"
+      w.kind === "info" ||
+      w.kind === "analytics" ||
+      w.kind === "site-preview"
     ) {
-      continue
-    }
-    dashboardOrder.push({
-      kind: "recipe",
-      widgetId: w.id,
-      size: resolveWidgetSize(w.size),
-    })
-  }
-
-  for (const item of allNavItems()) {
-    const pinned = pinnedFromNavItem(item)
-    if (!pinned) continue
-    if (item.defaultPlacement === "dashboard") {
-      dashboardOrder.push({ kind: "pinned", pinned, size: { w: 1, h: 1 } })
-    } else {
-      dock.push(pinned)
+      dashboardOrder.push({
+        kind: "recipe",
+        widgetId: w.id,
+        size: resolveWidgetSize(w.size),
+      })
+    } else if (w.kind === "nav") {
+      for (const item of w.items) {
+        const pinned = pinnedFromNavItem(item)
+        if (!pinned) continue
+        if (item.defaultPlacement === "dashboard") {
+          dashboardOrder.push({ kind: "pinned", pinned, size: { w: 1, h: 1 } })
+        } else {
+          dock.push(pinned)
+        }
+      }
     }
   }
 
@@ -217,7 +234,7 @@ function updateSlotById(
 }
 
 export const usePlacement = create<PlacementState>((set, get) => {
-  const seed = seedFromRecipe()
+  const seed = seedFromRecipe(recipeFor(DEFAULT_RECIPE_ID))
   return {
     dashboardOrder: seed.dashboardOrder,
     dock: seed.dock,
@@ -262,7 +279,7 @@ export const usePlacement = create<PlacementState>((set, get) => {
       let item: PinnedItem | null = existingPinned ?? null
       if (!item) {
         if (!meta) return
-        const navMatch = navItemFor(action)
+        const navMatch = navItemFor(activeRecipe(), action)
         item = {
           id,
           action,
@@ -372,7 +389,7 @@ export const usePlacement = create<PlacementState>((set, get) => {
     unhideWidget: (id) => {
       const state = get()
       if (!state.hiddenWidgetIds.includes(id)) return
-      const recipeWidget = adminRecipe.widgets.find((w) => w.id === id)
+      const recipeWidget = activeRecipe().widgets.find((w) => w.id === id)
       const isRecipeWidget =
         recipeWidget?.kind === "info" ||
         recipeWidget?.kind === "analytics" ||
@@ -400,7 +417,16 @@ export const usePlacement = create<PlacementState>((set, get) => {
     },
 
     resetToDefault: () => {
-      const fresh = seedFromRecipe()
+      const fresh = seedFromRecipe(activeRecipe())
+      set({
+        dashboardOrder: fresh.dashboardOrder,
+        dock: fresh.dock,
+        hiddenWidgetIds: [],
+      })
+    },
+
+    reseed: (recipeId) => {
+      const fresh = seedFromRecipe(recipeFor(recipeId))
       set({
         dashboardOrder: fresh.dashboardOrder,
         dock: fresh.dock,
@@ -408,4 +434,15 @@ export const usePlacement = create<PlacementState>((set, get) => {
       })
     },
   }
+})
+
+// Whenever the active recipe changes (slice 2 wires the site switcher
+// to `setActiveRecipeId`), reseed dashboard + dock + hidden state from
+// the new recipe's defaults. Keeping this subscription here — rather
+// than calling `reseed` from the recipe store's setter — preserves the
+// store dependency direction (placement → recipe) and avoids any
+// circular-import surface.
+useRecipe.subscribe((state, prev) => {
+  if (state.activeRecipeId === prev.activeRecipeId) return
+  usePlacement.getState().reseed(state.activeRecipeId)
 })

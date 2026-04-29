@@ -10,10 +10,11 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu"
-import { adminRecipe } from "@/recipes/admin"
+import { recipeFor } from "@/recipes"
 import { iconFor } from "@/contexts/registry"
 import { refKey } from "@/contexts/url"
 import { usePlacement } from "@/stores/placementStore"
+import { useRecipe } from "@/stores/recipeStore"
 import type {
   AnalyticsWidget,
   InfoWidget,
@@ -50,9 +51,11 @@ function useAddable(): {
   const dashboardOrder = usePlacement((s) => s.dashboardOrder)
   const dock = usePlacement((s) => s.dock)
   const hiddenWidgetIds = usePlacement((s) => s.hiddenWidgetIds)
+  const activeRecipeId = useRecipe((s) => s.activeRecipeId)
 
   return useMemo(() => {
-    const navItems = adminRecipe.widgets
+    const recipe = recipeFor(activeRecipeId)
+    const navItems = recipe.widgets
       .filter((w): w is NavWidget => w.kind === "nav")
       .flatMap((w) => w.items)
 
@@ -67,20 +70,20 @@ function useAddable(): {
       .map((navItem) => ({ kind: "launch" as const, navItem }))
 
     const hiddenSet = new Set(hiddenWidgetIds)
-    const infoAddables: AddableRecipe[] = adminRecipe.widgets
+    const infoAddables: AddableRecipe[] = recipe.widgets
       .filter(
         (w): w is InfoWidget => w.kind === "info" && hiddenSet.has(w.id),
       )
       .map((widget) => ({ kind: "info" as const, widget }))
 
-    const analyticsAddables: AddableRecipe[] = adminRecipe.widgets
+    const analyticsAddables: AddableRecipe[] = recipe.widgets
       .filter(
         (w): w is AnalyticsWidget =>
           w.kind === "analytics" && hiddenSet.has(w.id),
       )
       .map((widget) => ({ kind: "analytics" as const, widget }))
 
-    const previewAddables: AddableRecipe[] = adminRecipe.widgets
+    const previewAddables: AddableRecipe[] = recipe.widgets
       .filter(
         (w): w is SitePreviewWidget =>
           w.kind === "site-preview" && hiddenSet.has(w.id),
@@ -107,7 +110,7 @@ function useAddable(): {
       infoAddables.length +
       analyticsAddables.length
     return { sections, totalCount }
-  }, [dashboardOrder, dock, hiddenWidgetIds])
+  }, [activeRecipeId, dashboardOrder, dock, hiddenWidgetIds])
 }
 
 /**
