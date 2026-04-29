@@ -7,7 +7,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Badge } from "@/components/ui/badge"
+import { NotificationBadge } from "@/components/NotificationBadge"
 import {
   ContextMenu,
   ContextMenuPopup,
@@ -186,17 +186,13 @@ export function renderDockButton(
           )}
         />
       ) : null}
-      {item.badge ? (
-        <Badge
-          variant="destructive"
-          className={cn(
-            "pointer-events-none absolute text-[11px]",
-            badgeClassesFor(position),
-          )}
-        >
-          {item.badge}
-        </Badge>
-      ) : null}
+      <NotificationBadge
+        count={item.badge}
+        className={cn(
+          "pointer-events-none absolute",
+          badgeClassesFor(position),
+        )}
+      />
     </button>
   )
 }

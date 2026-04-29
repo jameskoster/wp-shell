@@ -446,6 +446,25 @@ export function ordersByView(view: OrdersView): Order[] {
   return ORDERS.filter((o) => o.status === view)
 }
 
+/**
+ * Statuses that demand merchant attention: `processing` (needs to be
+ * fulfilled), `on-hold` (needs a decision), `failed` (payment problem
+ * to investigate). `pending` is intentionally excluded — it's waiting
+ * on the customer, not the merchant — and the terminal states
+ * (`completed`, `refunded`, `cancelled`) are done.
+ */
+export const ACTION_REQUIRED_STATUSES: ReadonlySet<OrderStatus> = new Set<
+  OrderStatus
+>(["processing", "on-hold", "failed"])
+
+export function isActionRequired(status: OrderStatus): boolean {
+  return ACTION_REQUIRED_STATUSES.has(status)
+}
+
+export function ordersNeedingAction(): Order[] {
+  return ORDERS.filter((o) => isActionRequired(o.status))
+}
+
 export function statusCounts(): Record<OrdersView, number> {
   return {
     all: ORDERS.length,

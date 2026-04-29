@@ -32,7 +32,12 @@ import {
   Users,
   Wrench,
 } from "lucide-react"
-import { ORDERS } from "@/mocks/orders"
+import {
+  ORDERS,
+  ordersNeedingAction,
+  STATUS_LABEL,
+  STATUS_VARIANT,
+} from "@/mocks/orders"
 import { PAGES } from "@/mocks/pages"
 import { renderBackups } from "@/widgets/BackupStatus"
 import { renderQuickDraft } from "@/widgets/QuickDraftForm"
@@ -61,16 +66,28 @@ const RECENT_PAGES: Array<{ id: string; seed?: string }> = [
 // Mirror the orders workspace: derive the Recent orders widget straight
 // from the ORDERS mock so each row links to a real order in the
 // workspace (rather than drifting from invented #1284-style numbers).
+// Each row carries its status badge so triage from the dashboard
+// matches the dataview's vocabulary (`STATUS_VARIANT` is the single
+// source of truth for tone).
 const recentOrderItems: InfoListItem[] = ORDERS.slice(0, 10).map((order) => ({
   id: order.id,
   title: `${order.number} — ${order.customer}`,
   meta: `${order.total} · ${order.date}`,
   thumbnail: { kind: "avatar", name: order.customer },
+  badge: {
+    label: STATUS_LABEL[order.status],
+    variant: STATUS_VARIANT[order.status],
+  },
   action: {
     type: "orders",
     params: { view: "all", id: order.id },
   },
 }))
+
+// Count of orders that need merchant attention (processing / on hold /
+// failed). Surfaced as the widget's header notification badge so the
+// dashboard reads the same urgency the orders workspace does.
+const ordersActionCount = ordersNeedingAction().length
 
 const jumpBackInItems: InfoListItem[] = RECENT_PAGES.flatMap(({ id, seed }) => {
   const page = PAGES.find((p) => p.id === id)
@@ -162,6 +179,7 @@ export const adminRecipe: Recipe = {
       title: "Recent orders",
       icon: ShoppingBag,
       size: "hero",
+      headerBadge: ordersActionCount,
       items: recentOrderItems,
     },
     {
@@ -825,7 +843,10 @@ export const adminRecipe: Recipe = {
           title: "Orders",
           icon: ShoppingBag,
           action: { type: "orders" },
-          badge: "12",
+          // Same source of truth as the Recent orders widget header
+          // badge — both surfaces report orders that need merchant
+          // attention, so they should always agree.
+          badge: ordersActionCount > 0 ? String(ordersActionCount) : undefined,
         },
         {
           id: "n-product-reviews",

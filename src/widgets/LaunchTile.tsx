@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+import { NotificationBadge } from "@/components/NotificationBadge"
 import { Card } from "@/components/ui/card"
 import { useContexts } from "@/contexts/store"
 import { launchKey } from "@/contexts/registry"
@@ -32,14 +32,10 @@ export function LaunchTile({
             <Icon className="size-5" />
           </span>
         ) : null}
-        {widget.badge ? (
-          <Badge
-            variant="destructive"
-            className="pointer-events-none absolute right-5 bottom-5 text-[11px]"
-          >
-            {widget.badge}
-          </Badge>
-        ) : null}
+        <NotificationBadge
+          count={widget.badge}
+          className="pointer-events-none absolute right-5 bottom-5"
+        />
         <div className="flex w-full flex-col items-start self-stretch text-start">
           <div className="text-sm font-medium">{widget.title}</div>
           {widget.description ? (

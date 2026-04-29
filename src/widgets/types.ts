@@ -11,6 +11,31 @@ export type WidgetSize =
   | "xl"
   | "hero"
 
+/**
+ * Variants supported by `BadgeDescriptor` — kept as a literal union so
+ * recipe data stays a value (not a reference into UI types). Mirrors
+ * the variants exposed by `@/components/ui/badge` minus the cosmetic
+ * `default` (which has no semantic meaning at the recipe layer).
+ */
+export type BadgeVariant =
+  | "destructive"
+  | "error"
+  | "info"
+  | "outline"
+  | "secondary"
+  | "success"
+  | "warning"
+
+/**
+ * Compact, structured badge descriptor used by recipes. Recipes don't
+ * import the UI Badge component directly; widget renderers translate
+ * this shape into the actual visual.
+ */
+export type BadgeDescriptor = {
+  label: string
+  variant?: BadgeVariant
+}
+
 export type WidgetBase = {
   id: string
   title: string
@@ -32,6 +57,14 @@ export type WidgetBase = {
    */
   minSize?: CellSize
   source?: string
+  /**
+   * Notification-style count rendered next to the widget's title. Used
+   * to surface "this widget contains N items needing your attention"
+   * (e.g. orders awaiting fulfilment). Renderers hide the badge when
+   * the count is 0 or omitted. Distinct from `LaunchTileWidget.badge`,
+   * which is a free-form string anchored to the tile body.
+   */
+  headerBadge?: number
 }
 
 export type LaunchTileWidget = WidgetBase & {
@@ -68,6 +101,13 @@ export type InfoListItem = {
   meta?: string
   action?: ContextRef
   thumbnail?: ItemThumbnail
+  /**
+   * Optional status pill rendered at the row's trailing edge. Carries
+   * its own variant so callers can mirror the source-of-truth tone
+   * (e.g. order status colours from `STATUS_VARIANT`) without the
+   * widget having to know about each domain.
+   */
+  badge?: BadgeDescriptor
 }
 
 export type InfoWidget = WidgetBase & {

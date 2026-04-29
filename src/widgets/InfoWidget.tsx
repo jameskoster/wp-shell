@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge"
+import { NotificationBadge } from "@/components/NotificationBadge"
 import {
   Card,
   CardHeader,
@@ -44,9 +46,18 @@ export function InfoWidget({
         className="absolute top-3 right-3 z-10"
       />
       <CardHeader>
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
+        <CardTitle className="text-sm font-medium flex items-center gap-2 pr-8">
+          {Icon ? <Icon className="size-4 text-muted-foreground shrink-0" /> : null}
           <span className="truncate">{widget.title}</span>
+          <NotificationBadge
+            count={widget.headerBadge}
+            className="shrink-0"
+            aria-label={
+              widget.headerBadge
+                ? `${widget.headerBadge} need attention`
+                : undefined
+            }
+          />
         </CardTitle>
         {!compact && widget.source ? (
           <CardDescription className="text-[11px] truncate">
@@ -149,6 +160,7 @@ function ItemBody({
             </div>
           ) : null}
         </div>
+        {item.badge ? <ItemBadge badge={item.badge} /> : null}
       </>
     )
   }
@@ -156,11 +168,28 @@ function ItemBody({
   return (
     <>
       <span className="min-w-0 flex-1 truncate text-sm">{item.title}</span>
+      {item.badge ? <ItemBadge badge={item.badge} /> : null}
       {item.meta ? (
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {item.meta}
         </span>
       ) : null}
     </>
+  )
+}
+
+function ItemBadge({
+  badge,
+}: {
+  badge: NonNullable<NonNullable<InfoWidgetDef["items"]>[number]["badge"]>
+}) {
+  return (
+    <Badge
+      variant={badge.variant ?? "secondary"}
+      size="sm"
+      className="shrink-0 px-1.5"
+    >
+      {badge.label}
+    </Badge>
   )
 }
