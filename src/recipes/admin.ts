@@ -6,6 +6,7 @@ import {
   DatabaseBackup,
   DollarSign,
   Eye,
+  FilePen,
   FileText,
   Globe,
   HeartPulse,
@@ -29,6 +30,7 @@ import {
   Star,
   TrendingUp,
   Trophy,
+  UserCheck,
   Users,
   Wrench,
 } from "lucide-react"
@@ -39,6 +41,12 @@ import {
   STATUS_VARIANT,
 } from "@/mocks/orders"
 import { PAGES } from "@/mocks/pages"
+import {
+  PRESENCE,
+  activePosts,
+  locationAction,
+  locationLabel,
+} from "@/mocks/presence"
 import { renderBackups } from "@/widgets/BackupStatus"
 import { renderQuickDraft } from "@/widgets/QuickDraftForm"
 import { renderSiteHealth } from "@/widgets/SiteHealthMeter"
@@ -88,6 +96,48 @@ const recentOrderItems: InfoListItem[] = ORDERS.slice(0, 10).map((order) => ({
 // failed). Surfaced as the widget's header notification badge so the
 // dashboard reads the same urgency the orders workspace does.
 const ordersActionCount = ordersNeedingAction().length
+
+// "Who's online" — every signed-in editor with a one-line locator
+// (Editing "X" / Comments / Dashboard / …). Rows whose location maps
+// to a known context become click targets so the dashboard's presence
+// surface doubles as a launcher: tap a teammate to land where they are.
+const whosOnlineItems: InfoListItem[] = PRESENCE.map((p) => {
+  const action = locationAction(p)
+  return {
+    id: p.id,
+    title: p.name,
+    meta: `${locationLabel(p)} · ${p.since}`,
+    thumbnail: { kind: "avatar", name: p.name },
+    ...(action ? { action } : {}),
+  }
+})
+
+// "Active posts" — pages currently being edited. Anchor the row on
+// the post (its title is the primary unit), surface the editor as the
+// avatar, and join multiple concurrent editors into the meta line so a
+// merge-collision in progress reads at a glance. Clicking opens the
+// page in the editor, the same context the editor is in.
+const activePostItems: InfoListItem[] = activePosts().map(
+  ({ page, editors }) => {
+    const [primary, ...rest] = editors
+    const others =
+      rest.length === 0
+        ? ""
+        : rest.length === 1
+          ? ` & ${rest[0].name.split(" ")[0]}`
+          : ` & ${rest.length} others`
+    return {
+      id: page.id,
+      title: page.title,
+      meta: `${primary.name} editing${others} · ${primary.since}`,
+      thumbnail: { kind: "avatar", name: primary.name },
+      action: {
+        type: "editor",
+        params: { kind: "page", id: page.id },
+      },
+    }
+  },
+)
 
 const jumpBackInItems: InfoListItem[] = RECENT_PAGES.flatMap(({ id, seed }) => {
   const page = PAGES.find((p) => p.id === id)
@@ -172,6 +222,24 @@ export const adminRecipe: Recipe = {
         sparkline: [2.7, 2.8, 2.6, 2.5, 2.4, 2.5, 2.4],
         caption: "vs. last week",
       },
+    },
+    {
+      id: "info-whos-online",
+      kind: "info",
+      title: "Who's online",
+      icon: UserCheck,
+      size: "lg",
+      headerBadge: PRESENCE.length,
+      items: whosOnlineItems,
+    },
+    {
+      id: "info-active-posts",
+      kind: "info",
+      title: "Active edits",
+      icon: FilePen,
+      size: "lg",
+      headerBadge: activePostItems.length,
+      items: activePostItems,
     },
     {
       id: "info-recent-orders",
