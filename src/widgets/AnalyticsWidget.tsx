@@ -6,6 +6,7 @@ import {
   CardPanel,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useContexts } from "@/contexts/store"
 import type { AnalyticsWidget as AnalyticsWidgetDef, WidgetSize } from "./types"
 import { WidgetMenu } from "./WidgetMenu"
 
@@ -89,6 +90,7 @@ export function AnalyticsWidget({
   widget: AnalyticsWidgetDef
   size?: WidgetSize
 }) {
+  const open = useContexts((s) => s.open)
   const Icon = widget.icon
   const TrendIcon = widget.metric.delta ? TREND_ICON[widget.metric.delta.trend] : null
   const trendVariant = widget.metric.delta
@@ -120,10 +122,30 @@ export function AnalyticsWidget({
         className="absolute top-3 right-3 z-10"
       />
       <CardHeader>
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
-          <span className="truncate">{widget.title}</span>
-        </CardTitle>
+        {/*
+          The title doubles as a launcher into the Analytics workspace —
+          the metric on display is a teaser of what's there in full.
+          Hover/focus styling is restrained so it reads as a label with
+          a click affordance, not a call-to-action button.
+        */}
+        <CardTitle
+          className="text-sm font-medium"
+          render={
+            <button
+              type="button"
+              onClick={(e) =>
+                open(
+                  { type: "analytics" },
+                  e.currentTarget.getBoundingClientRect(),
+                )
+              }
+              className="-mx-1 -my-0.5 flex max-w-full items-center gap-2 rounded-sm px-1 py-0.5 text-start outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
+              <span className="truncate">{widget.title}</span>
+            </button>
+          }
+        />
       </CardHeader>
       <CardPanel className="pt-0 flex flex-col">
         <div className="flex items-center gap-2">
