@@ -174,7 +174,6 @@ const submissionItems: InfoListItem[] = [
 ]
 
 const reviewCount = reviewItems.length
-const calendarCount = calendarItems.length
 const draftCount = ARTICLES.filter((a) => a.status === "draft").length
 
 /**
@@ -273,7 +272,6 @@ export const editorialRecipe: Recipe = {
       icon: CalendarClock,
       size: { w: 6, h: 4 },
       minSize: { w: 4, h: 3 },
-      headerBadge: calendarCount,
       items: calendarItems,
       render: renderEditorialCalendar,
     },
@@ -292,7 +290,6 @@ export const editorialRecipe: Recipe = {
       title: "Active edits",
       icon: FilePen,
       size: "lg",
-      headerBadge: activeArticleItems.length,
       items: activeArticleItems,
     },
     {
@@ -315,7 +312,6 @@ export const editorialRecipe: Recipe = {
       title: "Who's online",
       icon: UserCheck,
       size: "wide",
-      headerBadge: EDITORIAL_PRESENCE.length,
       items: whosOnlineItems,
     },
     {

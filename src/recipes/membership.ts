@@ -192,7 +192,6 @@ export const membershipRecipe: Recipe = {
       title: "Recent signups",
       icon: UserPlus,
       size: { w: 6, h: 3 },
-      headerBadge: recentSignupItems.length,
       items: recentSignupItems,
     },
     {
@@ -201,7 +200,6 @@ export const membershipRecipe: Recipe = {
       title: "Top discussions",
       icon: MessageCircle,
       size: { w: 6, h: 3 },
-      headerBadge: newReplyCount,
       items: topDiscussionItems,
     },
 
@@ -214,7 +212,6 @@ export const membershipRecipe: Recipe = {
       title: "Active in forum",
       icon: UserCheck,
       size: { w: 6, h: 2 },
-      headerBadge: COMMUNITY_PRESENCE.length,
       items: activeInForumItems,
     },
     {

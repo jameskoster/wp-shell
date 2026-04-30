@@ -753,7 +753,6 @@ export const adminRecipe: Recipe = {
       title: "Who's online",
       icon: UserCheck,
       size: "lg",
-      headerBadge: PRESENCE.length,
       items: whosOnlineItems,
     },
     {
@@ -762,7 +761,6 @@ export const adminRecipe: Recipe = {
       title: "Active edits",
       icon: FilePen,
       size: "lg",
-      headerBadge: activePostItems.length,
       items: activePostItems,
     },
     {
