@@ -184,20 +184,16 @@ const draftCount = ARTICLES.filter((a) => a.status === "draft").length
  *
  *   ┌──────────────────┬────────────────┬───┐
  *   │ stats × 3 (w:2)  │  site preview  │ A │  rows 0–1
- *   ├──────────────────┤   (w:5 h:10)   ├───┤
+ *   ├──────────────────┤   (w:5 h:6)    ├───┤
  *   │ editorial cal    │                │ P │  rows 2–5
  *   │ (w:6 h:4 — table)│                ├───┤
- *   ├──────┬─────┬─────┤                │ T │  rows 2–3
- *   │ pend │ edit│ drft│                ├───┤
- *   │ rev  │     │ s   │                │ S │  rows 2–3
- *   ├──────┴─────┴─────┤                │   │
- *   │ who's │ top str  │                │   │  rows 8–9
- *   ├──────────────────┴────────────────┴───┤
- *   │ pend comments │ submissions │ legend  │  rows 10–11
- *   └───────────────┴─────────────┴─────────┘
+ *   ├──────┬─────┬─────┴────────────────┤ T │  rows 2–3
+ *   │ pend │ edit│ drft│  who's / top   ├───┤
+ *   │ rev  │     │ s   │  stories, etc. │ S │  rows 2–3
+ *   └──────┴─────┴─────┴────────────────┴───┘
  *
- * The four right-edge launch tiles fall there naturally because the
- * site preview (w:5) leaves col 11 empty in rows 0–9; launch tiles
+ * The right-edge launch tiles fall there naturally because the
+ * site preview (w:5) leaves col 11 empty in rows 0–5; launch tiles
  * seed last (nav widget is last in `widgets`) and fill the first
  * available 1×1 cells, which are exactly that column.
  *
@@ -251,13 +247,13 @@ export const editorialRecipe: Recipe = {
     {
       // Site preview is tall + narrow so the launch tiles land in the
       // single empty column at the right edge (col 11). Width 5 and
-      // height 10 are tuned so col 11 stays free for exactly the
-      // four dashboard launch tiles seeded by the nav widget.
+      // height 6 are tuned so col 11 stays free for the dashboard
+      // launch tiles seeded by the nav widget.
       id: "site-preview",
       kind: "site-preview",
       title: "View site",
       icon: MonitorSmartphone,
-      size: { w: 5, h: 10 },
+      size: { w: 5, h: 6 },
       minSize: { w: 4, h: 4 },
       action: { type: "editor", title: "Appearance" },
       url: "bristolreview.example/",
