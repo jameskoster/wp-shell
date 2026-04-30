@@ -28,6 +28,10 @@ const recentEssayItems: InfoListItem[] = recentBlogPosts(6).map((p) => ({
   action: {
     type: "editor",
     params: { kind: "post", id: p.id },
+    // Carry the post's actual title so the opened editor's chrome
+    // (tile, dock, recents) matches the row the user just clicked,
+    // rather than the slug-derived fallback.
+    title: p.title,
   },
 }))
 
