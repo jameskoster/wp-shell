@@ -115,6 +115,8 @@ export function AnalyticsWidget({
     <Card className="group h-full overflow-hidden">
       <WidgetMenu
         widgetId={widget.id}
+        widgetTitle={widget.title}
+        showSettings
         className="absolute top-3 right-3 z-10"
       />
       <CardHeader>
