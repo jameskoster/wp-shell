@@ -114,8 +114,14 @@ export function locationLabel(p: EditorialPresence): string {
 export function locationAction(p: EditorialPresence): ContextRef | undefined {
   if (p.location.kind === "dashboard") return undefined
   if (p.location.kind === "screen") return p.location.action
+  const article = getArticle(p.location.articleId)
   return {
     type: "editor",
     params: { kind: "post", id: p.location.articleId },
+    // Mirror the trigger label (`Editing "<title>"`) so the opened
+    // context is tagged with the same headline rather than the
+    // slug-derived fallback. Falls through to the fallback when the
+    // article id has no mock entry.
+    ...(article ? { title: article.title } : {}),
   }
 }

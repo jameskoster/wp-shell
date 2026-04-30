@@ -140,7 +140,15 @@ export function EditorialCalendar() {
               cell={cell}
               onOpen={(article, rect) =>
                 open(
-                  { type: "editor", params: { kind: "post", id: article.id } },
+                  {
+                    type: "editor",
+                    params: { kind: "post", id: article.id },
+                    // Carry the article's actual headline so the opened
+                    // editor's title (tile, dock, recents) matches the
+                    // chip the user just clicked, instead of falling
+                    // back to the slug-derived "Housing investigation".
+                    title: article.title,
+                  },
                   rect,
                 )
               }

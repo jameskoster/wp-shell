@@ -40,10 +40,13 @@ import type { InfoListItem, Recipe } from "@/widgets/types"
 // Reused by the dashboard's `editor` clicks: the Editor's mock
 // fallback handles unknown ids gracefully, so opening an article from
 // any of the editorial widgets lands on a generic editor surface
-// rather than 404'ing.
-const articleAction = (id: string): InfoListItem["action"] => ({
+// rather than 404'ing. Passing `title` keeps the opened context's
+// chrome (tile, dock, recents) labelled with the article's actual
+// headline rather than the slug-derived fallback.
+const articleAction = (id: string, title: string): InfoListItem["action"] => ({
   type: "editor",
   params: { kind: "post", id },
+  title,
 })
 
 const reviewItems: InfoListItem[] = articlesInReview().map((a) => ({
@@ -52,7 +55,7 @@ const reviewItems: InfoListItem[] = articlesInReview().map((a) => ({
   meta: `By ${a.author} · ${a.date}`,
   thumbnail: { kind: "image", seed: a.seed },
   badge: { label: a.section, variant: SECTION_VARIANT[a.section] },
-  action: articleAction(a.id),
+  action: articleAction(a.id, a.title),
 }))
 
 const calendarItems: InfoListItem[] = scheduledArticles().map((a) => ({
@@ -61,7 +64,7 @@ const calendarItems: InfoListItem[] = scheduledArticles().map((a) => ({
   meta: `${a.date} · ${a.author}`,
   thumbnail: { kind: "image", seed: a.seed },
   badge: { label: a.section, variant: SECTION_VARIANT[a.section] },
-  action: articleAction(a.id),
+  action: articleAction(a.id, a.title),
 }))
 
 const topStoryItems: InfoListItem[] = topArticles(8).map((a) => ({
@@ -70,7 +73,7 @@ const topStoryItems: InfoListItem[] = topArticles(8).map((a) => ({
   meta: `${a.views?.toLocaleString() ?? "—"} views · ${a.author}`,
   thumbnail: { kind: "image", seed: a.seed },
   badge: { label: a.section, variant: SECTION_VARIANT[a.section] },
-  action: articleAction(a.id),
+  action: articleAction(a.id, a.title),
 }))
 
 const activeArticleItems: InfoListItem[] = activeArticles().map(
@@ -88,7 +91,7 @@ const activeArticleItems: InfoListItem[] = activeArticles().map(
       meta: `${primary.name} editing${others} · ${primary.since}`,
       thumbnail: { kind: "avatar", name: primary.name },
       badge: { label: article.section, variant: SECTION_VARIANT[article.section] },
-      action: articleAction(article.id),
+      action: articleAction(article.id, article.title),
     }
   },
 )
