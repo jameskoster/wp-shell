@@ -224,24 +224,6 @@ export const adminRecipe: Recipe = {
       },
     },
     {
-      id: "info-whos-online",
-      kind: "info",
-      title: "Who's online",
-      icon: UserCheck,
-      size: "lg",
-      headerBadge: PRESENCE.length,
-      items: whosOnlineItems,
-    },
-    {
-      id: "info-active-posts",
-      kind: "info",
-      title: "Active edits",
-      icon: FilePen,
-      size: "lg",
-      headerBadge: activePostItems.length,
-      items: activePostItems,
-    },
-    {
       id: "info-recent-orders",
       kind: "info",
       title: "Recent orders",
@@ -756,6 +738,32 @@ export const adminRecipe: Recipe = {
           thumbnail: { kind: "icon", icon: MessageSquare },
         },
       ],
+    },
+    // Presence widgets are de-emphasised on Studio Park: a solo
+    // store owner is usually the only person logged in, so "Who's
+    // online" and "Active edits" are informational rather than
+    // action-driving. Pushed down here next to the activity log so
+    // they sit with the rest of the reference / audit surface
+    // rather than competing with commerce widgets above the fold.
+    // The presence widgets stay lg / hero-shaped on the editorial
+    // recipe, where multi-author collisions actually need surfacing.
+    {
+      id: "info-whos-online",
+      kind: "info",
+      title: "Who's online",
+      icon: UserCheck,
+      size: "lg",
+      headerBadge: PRESENCE.length,
+      items: whosOnlineItems,
+    },
+    {
+      id: "info-active-posts",
+      kind: "info",
+      title: "Active edits",
+      icon: FilePen,
+      size: "lg",
+      headerBadge: activePostItems.length,
+      items: activePostItems,
     },
     {
       id: "info-activity",
