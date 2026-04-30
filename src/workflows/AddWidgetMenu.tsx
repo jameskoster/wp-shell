@@ -21,6 +21,7 @@ import type {
   NavItem,
   NavWidget,
   SitePreviewWidget,
+  TasksWidget,
 } from "@/widgets/types"
 
 type AddableLaunch = {
@@ -29,8 +30,8 @@ type AddableLaunch = {
 }
 
 type AddableRecipe = {
-  kind: "info" | "analytics" | "site-preview"
-  widget: InfoWidget | AnalyticsWidget | SitePreviewWidget
+  kind: "info" | "analytics" | "site-preview" | "tasks"
+  widget: InfoWidget | AnalyticsWidget | SitePreviewWidget | TasksWidget
 }
 
 type AddableSection = {
@@ -90,12 +91,21 @@ function useAddable(): {
       )
       .map((widget) => ({ kind: "site-preview" as const, widget }))
 
+    const tasksAddables: AddableRecipe[] = recipe.widgets
+      .filter(
+        (w): w is TasksWidget => w.kind === "tasks" && hiddenSet.has(w.id),
+      )
+      .map((widget) => ({ kind: "tasks" as const, widget }))
+
     const sections: AddableSection[] = []
     if (launchAddables.length > 0) {
       sections.push({ label: "Launch tiles", items: launchAddables })
     }
     if (previewAddables.length > 0) {
       sections.push({ label: "Site", items: previewAddables })
+    }
+    if (tasksAddables.length > 0) {
+      sections.push({ label: "Tasks", items: tasksAddables })
     }
     if (infoAddables.length > 0) {
       sections.push({ label: "Information", items: infoAddables })
@@ -107,6 +117,7 @@ function useAddable(): {
     const totalCount =
       launchAddables.length +
       previewAddables.length +
+      tasksAddables.length +
       infoAddables.length +
       analyticsAddables.length
     return { sections, totalCount }
@@ -181,7 +192,7 @@ function SectionGroup({
   showSeparatorAbove: boolean
   onAddLaunch: (navItem: NavItem) => void
   onAddRecipe: (
-    widget: InfoWidget | AnalyticsWidget | SitePreviewWidget,
+    widget: InfoWidget | AnalyticsWidget | SitePreviewWidget | TasksWidget,
   ) => void
 }) {
   return (

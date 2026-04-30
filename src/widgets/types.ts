@@ -128,6 +128,40 @@ export type AnalyticsWidget = WidgetBase & {
   metric: MetricDef
 }
 
+/**
+ * One row in a `TasksWidget`. The checkbox toggles completion (state
+ * lives in `useTasks`, keyed by widget + task id). When `action` is
+ * set, the row body doubles as a launcher into the workflow that
+ * actually performs the task — checking it off reflects the user's
+ * own confirmation, not the underlying record's state.
+ */
+export type TaskItem = {
+  id: string
+  title: string
+  /**
+   * Optional second line beneath the title — short context for what
+   * the task involves (e.g. "Connect a payment provider to start
+   * accepting orders.").
+   */
+  description?: string
+  action?: ContextRef
+  /**
+   * Initial completion state used to seed the local store on first
+   * mount. After seeding, `useTasks` is the single source of truth.
+   */
+  done?: boolean
+}
+
+export type TasksWidget = WidgetBase & {
+  kind: "tasks"
+  tasks: TaskItem[]
+  /**
+   * Copy shown in place of the list once every task is complete.
+   * Defaults to a generic "All done." when omitted.
+   */
+  completeMessage?: string
+}
+
 export type NavItem = {
   id: string
   title: string
@@ -180,6 +214,7 @@ export type WidgetDef =
   | AnalyticsWidget
   | NavWidget
   | SitePreviewWidget
+  | TasksWidget
 
 export type Recipe = {
   id: string

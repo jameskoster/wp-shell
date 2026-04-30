@@ -11,6 +11,7 @@ import { InfoWidget } from "./InfoWidget"
 import { AnalyticsWidget } from "./AnalyticsWidget"
 import { NavWidget } from "./NavWidget"
 import { SitePreviewWidget } from "./SitePreviewWidget"
+import { TasksWidget } from "./TasksWidget"
 import { pack, rectToWidgetSize } from "./grid/canonicalGrid"
 import { useGridGeometry } from "./grid/useGridGeometry"
 import { ResizeHandles } from "./grid/ResizeHandles"
@@ -55,6 +56,8 @@ export function renderWidget(w: WidgetDef, sizeOverride?: WidgetSize) {
       return <NavWidget widget={w} size={size} />
     case "site-preview":
       return <SitePreviewWidget widget={w} />
+    case "tasks":
+      return <TasksWidget widget={w} size={size} />
   }
 }
 

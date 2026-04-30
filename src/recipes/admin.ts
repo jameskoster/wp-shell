@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BarChart3,
   CalendarDays,
+  CheckSquare,
   DatabaseBackup,
   DollarSign,
   Eye,
@@ -536,6 +537,62 @@ export const adminRecipe: Recipe = {
       icon: History,
       size: "wide",
       items: jumpBackInItems,
+    },
+    {
+      // Onboarding-style task list. Kicks off above the
+      // informational widgets so a fresh install can use it as the
+      // "what should I do first?" surface; once every task is
+      // checked the body collapses to a quiet "All set." and the
+      // widget is a candidate to dismiss via its menu.
+      id: "tasks-store-setup",
+      kind: "tasks",
+      title: "Set up your store",
+      icon: CheckSquare,
+      size: "hero",
+      completeMessage: "Store is ready to go.",
+      tasks: [
+        {
+          id: "products",
+          title: "Add your first product",
+          description: "List something to sell so customers have a reason to visit.",
+          action: {
+            type: "edit-page",
+            params: { id: "products" },
+            title: "Products",
+          },
+        },
+        {
+          id: "payments",
+          title: "Connect a payment provider",
+          description: "Choose how you'll get paid before going live.",
+          action: { type: "settings", params: { section: "payments" } },
+        },
+        {
+          id: "shipping",
+          title: "Set shipping rates",
+          description: "Define where you ship and what it costs.",
+          action: { type: "settings", params: { section: "shipping" } },
+          done: true,
+        },
+        {
+          id: "tax",
+          title: "Configure tax",
+          description: "Apply the right tax rules for your region.",
+          action: { type: "settings", params: { section: "tax" } },
+        },
+        {
+          id: "domain",
+          title: "Connect your domain",
+          description: "Swap the temporary subdomain for your own.",
+          action: { type: "settings", params: { section: "general" } },
+        },
+        {
+          id: "launch",
+          title: "Launch the store",
+          description: "Flip the storefront from coming-soon to live.",
+          action: { type: "settings", params: { section: "general" } },
+        },
+      ],
     },
     {
       id: "info-quick-draft",

@@ -183,7 +183,8 @@ function seedFromRecipe(recipe: Recipe): {
     if (
       w.kind === "info" ||
       w.kind === "analytics" ||
-      w.kind === "site-preview"
+      w.kind === "site-preview" ||
+      w.kind === "tasks"
     ) {
       dashboardOrder.push({
         kind: "recipe",
@@ -393,7 +394,8 @@ export const usePlacement = create<PlacementState>((set, get) => {
       const isRecipeWidget =
         recipeWidget?.kind === "info" ||
         recipeWidget?.kind === "analytics" ||
-        recipeWidget?.kind === "site-preview"
+        recipeWidget?.kind === "site-preview" ||
+        recipeWidget?.kind === "tasks"
       if (!isRecipeWidget) {
         // Defensive — only recipe widgets land in hiddenWidgetIds, but
         // if something stale is in there, clear it without trying to
