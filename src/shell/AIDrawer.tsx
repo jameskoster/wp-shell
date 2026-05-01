@@ -1,6 +1,13 @@
-import { Sparkles, X } from "lucide-react"
-import { useEffect, useLayoutEffect } from "react"
+import { ArrowUp, Sparkles, X } from "lucide-react"
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react"
 import { Button } from "@/components/ui/button"
+import { InputGroup, InputGroupAddon } from "@/components/ui/input-group"
 import {
   Sheet,
   SheetDescription,
@@ -8,6 +15,7 @@ import {
   SheetPopup,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Textarea } from "@/components/ui/textarea"
 import { useIsMobile } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { useUI } from "./uiStore"
@@ -25,11 +33,61 @@ function AIDrawerContent() {
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center text-sm text-muted-foreground">
       <Sparkles className="mb-3 size-6" />
       <p>The AI panel will live here.</p>
-      <p className="mt-1 text-xs">
-        In future slices it would summarize the active workspace, suggest
-        actions, and help compose content.
-      </p>
     </div>
+  )
+}
+
+/**
+ * Chat composer pinned to the bottom of the drawer. Submission is a
+ * no-op for the prototype: pressing Enter (or the send button) just
+ * clears the field — there's no model wired up behind it yet, the goal
+ * is to convey the eventual interaction shape.
+ *
+ * Keyboard contract mirrors common chat UIs: Enter submits, Shift+Enter
+ * inserts a newline. `requestSubmit` is used so the form's submit
+ * handler runs (rather than calling the clear logic twice from both
+ * keydown and submit).
+ */
+function ChatComposer() {
+  const [value, setValue] = useState("")
+  const canSend = value.trim().length > 0
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!canSend) return
+    setValue("")
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) return
+    event.preventDefault()
+    event.currentTarget.form?.requestSubmit()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="border-t p-3">
+      <InputGroup>
+        <Textarea
+          value={value}
+          onChange={(e) => setValue(e.currentTarget.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask the assistant..."
+          aria-label="Message AI assistant"
+          size="sm"
+        />
+        <InputGroupAddon align="block-end">
+          <Button
+            type="submit"
+            size="icon-sm"
+            disabled={!canSend}
+            aria-label="Send message"
+            className="ml-auto"
+          >
+            <ArrowUp />
+          </Button>
+        </InputGroupAddon>
+      </InputGroup>
+    </form>
   )
 }
 
@@ -97,16 +155,7 @@ function DesktopDrawer() {
           </Button>
         </header>
         <AIDrawerContent />
-        <div className="border-t px-6 py-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={closeAI}
-          >
-            Close
-          </Button>
-        </div>
+        <ChatComposer />
       </div>
     </aside>
   )
@@ -152,16 +201,7 @@ function MobileDrawer() {
           </SheetDescription>
         </SheetHeader>
         <AIDrawerContent />
-        <div className="border-t px-6 py-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={closeAI}
-          >
-            Close
-          </Button>
-        </div>
+        <ChatComposer />
       </SheetPopup>
     </Sheet>
   )
