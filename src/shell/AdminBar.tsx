@@ -417,24 +417,33 @@ export function AdminBar() {
       <div className="flex-1" />
 
       <Popover>
-        <PopoverTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Notifications"
-              className="relative"
-            >
-              <Bell />
-              {unreadCount > 0 ? (
-                <span
-                  aria-hidden
-                  className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive ring-2 ring-card"
-                />
-              ) : null}
-            </Button>
-          }
-        />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Notifications"
+                    className="relative"
+                  >
+                    <Bell />
+                    {unreadCount > 0 ? (
+                      <span
+                        aria-hidden
+                        className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive ring-2 ring-card"
+                      />
+                    ) : null}
+                  </Button>
+                }
+              />
+            }
+          />
+          <TooltipPopup side="bottom" sideOffset={6}>
+            Notifications
+          </TooltipPopup>
+        </Tooltip>
         <PopoverPopup align="end" className="w-80 p-0">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <span className="text-sm font-medium">Notifications</span>
@@ -476,16 +485,25 @@ export function AdminBar() {
         `aiOpen` flag in `uiStore`, so the panel persists across context
         switches and stays interactive alongside the workspace.
       */}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="AI assistant"
-        aria-pressed={aiOpen}
-        className={aiOpen ? "bg-accent text-accent-foreground" : undefined}
-        onClick={toggleAI}
-      >
-        <Sparkles />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="AI assistant"
+              aria-pressed={aiOpen}
+              className={aiOpen ? "bg-accent text-accent-foreground" : undefined}
+              onClick={toggleAI}
+            >
+              <Sparkles />
+            </Button>
+          }
+        />
+        <TooltipPopup side="bottom" sideOffset={6}>
+          AI assistant
+        </TooltipPopup>
+      </Tooltip>
 
       <div className="mx-1 h-5 w-px bg-border" aria-hidden />
 
