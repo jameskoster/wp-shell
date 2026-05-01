@@ -71,7 +71,12 @@ function containerPositionClasses(position: DockPosition): string {
     case "left-center":
       return "left-3 top-1/2 -translate-y-1/2"
     case "right-center":
-      return "right-3 top-1/2 -translate-y-1/2"
+      // The dock is `position: fixed` against the viewport, so a right-
+      // anchored dock would sit underneath the AI drawer. Offset by
+      // `--ai-drawer-width` (published by `AIDrawer`; defaults to 0px
+      // when the drawer is closed or absent) so the dock slides
+      // alongside the drawer rather than disappearing behind it.
+      return "top-1/2 -translate-y-1/2 right-[calc(--spacing(3)+var(--ai-drawer-width,0px))]"
     case "bottom-center":
     default:
       return "bottom-4 left-1/2 -translate-x-1/2"
@@ -407,7 +412,7 @@ export function Dock() {
   return (
     <div
       className={cn(
-        "fixed z-30 motion-safe:transition-[opacity,filter] motion-safe:duration-300 motion-safe:ease-glide",
+        "fixed z-30 motion-safe:transition-[opacity,filter,right] motion-safe:duration-300 motion-safe:ease-glide",
         inertDim
           ? "pointer-events-none opacity-40 blur-sm"
           : customizing

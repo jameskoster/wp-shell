@@ -34,15 +34,6 @@ import {
   TooltipPopup,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  Sheet,
-  SheetClose,
-  SheetDescription,
-  SheetHeader,
-  SheetPopup,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import { useCanCustomize, useCustomize } from "./customizeStore"
 import { goHomeFromActive } from "./goHomeFromActive"
 import { useDock, type DockPosition, type DockSize } from "./dockStore"
@@ -61,6 +52,8 @@ import { shortcutLabel } from "./useShortcuts"
 
 export function AdminBar() {
   const toggle = useUI((s) => s.toggle)
+  const aiOpen = useUI((s) => s.aiOpen)
+  const toggleAI = useUI((s) => s.toggleAI)
   const openContext = useContexts((s) => s.open)
   const closedRecents = useClosedRecents()
   const openCount = useOpenContexts().length
@@ -477,39 +470,22 @@ export function AdminBar() {
         </PopoverPopup>
       </Popover>
 
-      <Sheet>
-        <SheetTrigger
-          render={
-            <Button variant="ghost" size="icon-sm" aria-label="AI assistant">
-              <Sparkles />
-            </Button>
-          }
-        />
-        <SheetPopup className="w-96">
-          <SheetHeader>
-            <SheetTitle>AI assistant</SheetTitle>
-            <SheetDescription>
-              Context-aware help, content generation, and task support.
-              Placeholder in slice 1.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center text-sm text-muted-foreground">
-            <Sparkles className="mb-3 size-6" />
-            <p>The AI panel will live here.</p>
-            <p className="mt-1 text-xs">
-              In future slices it would summarize the active workspace, suggest
-              actions, and help compose content.
-            </p>
-          </div>
-          <div className="border-t px-6 py-3">
-            <SheetClose
-              render={<Button variant="outline" size="sm" className="w-full" />}
-            >
-              Close
-            </SheetClose>
-          </div>
-        </SheetPopup>
-      </Sheet>
+      {/*
+        AI assistant trigger. The drawer itself is rendered at Shell
+        level (see `Shell.tsx`) — this button just toggles the shared
+        `aiOpen` flag in `uiStore`, so the panel persists across context
+        switches and stays interactive alongside the workspace.
+      */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="AI assistant"
+        aria-pressed={aiOpen}
+        className={aiOpen ? "bg-accent text-accent-foreground" : undefined}
+        onClick={toggleAI}
+      >
+        <Sparkles />
+      </Button>
 
       <div className="mx-1 h-5 w-px bg-border" aria-hidden />
 

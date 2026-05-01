@@ -1,5 +1,6 @@
 import { useEffect, type MouseEvent } from "react"
 import { AdminBar } from "./AdminBar"
+import { AIDrawer } from "./AIDrawer"
 import { CommandPalette } from "./CommandPalette"
 import { ContextSwitcher } from "./ContextSwitcher"
 import { ContextStage } from "./ContextStage"
@@ -157,13 +158,41 @@ export function Shell() {
             </div>
           ) : null}
         </div>
-        <main
-          id="main"
-          aria-label={active ? active.title : "Dashboard"}
-          className="relative flex flex-1 min-h-0 overflow-hidden"
-        >
-          <ContextStage />
-        </main>
+        {/*
+          Main + AIDrawer share a horizontal flex row so opening the AI
+          drawer pushes the workspace stage inward instead of overlaying
+          it. The drawer is non-modal and persists across context
+          switches; placing it here (Shell-level, sibling to <main>)
+          keeps it mounted regardless of which workspace is active.
+        */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <main
+            id="main"
+            aria-label={active ? active.title : "Dashboard"}
+            // Pinned above the drawer's stacking context (drawer stays
+            // at default static stacking) so that whenever main visually
+            // overlaps the drawer — currently only during a switcher
+            // close transition where margin animates while z would
+            // otherwise snap — tiles stay on top instead of flashing
+            // behind the dimmed panel. Harmless when there's no overlap.
+            className={`relative z-10 flex flex-1 min-w-0 min-h-0 overflow-hidden motion-safe:transition-[margin] motion-safe:duration-300 motion-safe:ease-glide ${
+              // While the workspace switcher is open, pull main
+              // rightward by the AI drawer's width so the switcher's
+              // tile row gets the full viewport to lay out across
+              // instead of being clipped to the narrower main column.
+              // The drawer stays in place (dimmed by AIDrawer.tsx);
+              // negative margin keeps the drawer's slot in the flex row
+              // stable so its own width transition doesn't fight this
+              // one.
+              switcherOpen
+                ? "mr-[calc(0px-var(--ai-drawer-width,0px))]"
+                : ""
+            }`}
+          >
+            <ContextStage />
+          </main>
+          <AIDrawer />
+        </div>
         <Dock />
       </CustomizeDnd>
       <CommandPalette />
